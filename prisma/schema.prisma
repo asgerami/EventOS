@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Better Auth Core Models (User, Session, Account, Verification)
+// + Organization Plugin Models (Organization, Member, Invitation)
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  sessions      Session[]
+  accounts      Account[]
+
+  members       Member[]
+  invitations   Invitation[]
+
+  // EventOS relations
+  registrations Registration[]
+  staffScans    CheckIn[]      @relation("StaffScans")
+  printedBadges BadgeLog[]     @relation("StaffPrints")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  impersonatedBy String?
+
+  @@map("session")
+}
+
+model Account {
+  id           String    @id
+  userId       String
+  accountId    String
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  password     String?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model VerificationToken {
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  @@id([identifier, value])
+  @@map("verification")
+}
+
+model Organization {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  logo      String?
+  createdAt DateTime
+  metadata  String?
+
+  members     Member[]
+  invitations Invitation[]
+  events      Event[]
+
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  userId         String
+  role           String
+  createdAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  email          String
+  role           String?
+  status         String
+  expiresAt      DateTime
+  inviterId      String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@map("invitation")
+}
+
+// -----------------------------------------------------------------------------
+// EventOS Domain Models
+// -----------------------------------------------------------------------------
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+  REJECTED
+}
+
+enum CheckInType {
+  CHECKIN
+  CHECKOUT
+  REENTRY
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  tenantId    String   // Maps to Organization.id
+  organization Organization @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  slug        String
+  description String?
+  location    Json?    // { venue, address, city, country, coordinates }
+  startDate   DateTime
+  endDate     DateTime
+  timezone    String
+  capacity    Int
+  visibility  String   // public, private, unlisted
+  status      EventStatus @default(DRAFT)
+  
+  registrationSettings Json? // { approvalRequired, maxSessions, customFields... }
+  brandingSettings     Json? // { logo, colors, badgeTemplate }
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime? // Soft delete
+
+  sessions      EventSession[]
+  ticketTypes   TicketType[]
+  registrations Registration[]
+  stations      Station[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+}
+
+model EventSession {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  type        String   // conference, workshop, panel, keynote, networking
+  track       String?
+  room        String?
+  startTime   DateTime
+  endTime     DateTime
+  capacity    Int? // null = unlimited
+  speakers    Json? // [{ name, title, bio, photo }]
+  
+  requiresSeparateCheckin Boolean @default(false)
+  status      String   @default("scheduled")
+
+  checkIns          CheckIn[]
+  stationAssignments Station[] // Which stations serve this session (many-to-many implicit)
+
+  @@index([eventId, startTime])
+}
+
+model TicketType {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  name        String
+  price       Decimal  @default(0)
+  currency    String   @default("USD")
+  quantity    Int
+  sold        Int      @default(0)
+  
+  sessionAccess     String // "all" or "specific"
+  allowedSessionIds String[] // Array of UUIDs
+
+  perks       Json?
+  
+  registrations Registration[]
+}
+
+model Registration {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  attendeeId  String   @default(uuid()) // Can link to User if registered, or just standalone ID
+  // Optional link to User if they have an account
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  // Attendee details snapshot (in case User changes or no User exists)
+  firstName   String
+  lastName    String
+  email       String
+  
+  ticketTypeId String
+  ticketType   TicketType @relation(fields: [ticketTypeId], references: [id])
+  
+  sessionIds  String[] // Selected session IDs
+  
+  status      RegistrationStatus @default(PENDING)
+  channel     String // public, invite, csv, walkin, api
+  
+  customFieldValues Json?
+  
+  confirmationToken String @unique // Secure random token
+  qrCodeUrl         String?
+  
+  registeredAt DateTime @default(now())
+  confirmedAt  DateTime?
+
+  checkIns     CheckIn[]
+  badges       BadgeLog[]
+
+  @@unique([eventId, email])
+  @@index([eventId, status])
+  @@index([confirmationToken])
+}
+
+model Station {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  name        String
+  type        String // entrance, session_room, vip, registration_desk
+  isActive    Boolean @default(true)
+  
+  sessions    EventSession[] // Implicit many-to-many
+  
+  checkIns    CheckIn[]
+  printLogs   BadgeLog[]
+
+  // Staff assignment handled via RBAC/logic or could be explicit relation if needed
+  // assignedStaffIds String[] 
+}
+
+model CheckIn {
+  id             String   @id @default(uuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  
+  sessionId      String?
+  session        EventSession? @relation(fields: [sessionId], references: [id])
+  
+  stationId      String
+  station        Station @relation(fields: [stationId], references: [id])
+  
+  scannedBy      String
+  scanner        User    @relation("StaffScans", fields: [scannedBy], references: [id])
+  
+  scannedAt      DateTime @default(now())
+  type           CheckInType @default(CHECKIN)
+  method         String // qr_scan, manual, nfc
+
+  @@unique([registrationId, sessionId, type], name: "prevent_duplicate_checkin") 
+  // Note: Standard check-ins have sessionId=null. Session-specific check-ins have UUID.
+  
+  @@index([sessionId, scannedAt])
+  @@index([stationId, scannedAt])
+}
+
+model BadgeLog {
+  id             String   @id @default(uuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  
+  printedBy      String
+  printer        User    @relation("StaffPrints", fields: [printedBy], references: [id])
+  
+  stationId      String?
+  station        Station? @relation(fields: [stationId], references: [id])
+  
+  printedAt      DateTime @default(now())
+  reason         String // initial, lost, damaged, error
+}
