@@ -22,12 +22,21 @@ export async function withTenant(request: NextRequest) {
       };
     }
 
-    // Get active organization
-    const activeMember = await auth.api.getActiveMember({
-      headers: request.headers,
-    });
+    // Get active org ID from session first (same as auth-utils — avoids extra DB call and timeouts)
+    const rawSession = session.session as { activeOrganizationId?: string };
+    let organizationId = rawSession?.activeOrganizationId;
 
-    if (!activeMember?.data?.organizationId) {
+    // Fallback: getActiveMember (response can be .data.organizationId or top-level .organizationId)
+    if (!organizationId) {
+      const activeMember = await auth.api.getActiveMember({
+        headers: request.headers,
+      });
+      organizationId =
+        (activeMember as { data?: { organizationId?: string }; organizationId?: string })?.data?.organizationId ??
+        (activeMember as { organizationId?: string })?.organizationId;
+    }
+
+    if (!organizationId) {
       return {
         error: NextResponse.json(
           {
@@ -40,7 +49,7 @@ export async function withTenant(request: NextRequest) {
     }
 
     const organization = await prisma.organization.findUnique({
-      where: { id: activeMember.data.organizationId },
+      where: { id: organizationId },
     });
 
     if (!organization) {
@@ -55,7 +64,7 @@ export async function withTenant(request: NextRequest) {
     return {
       user: session.user,
       organization,
-      member: activeMember.data,
+      member: { organizationId, userId: session.user.id },
       tenantId: organization.id,
     };
   } catch (error) {

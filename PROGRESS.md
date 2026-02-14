@@ -130,43 +130,40 @@ Before proceeding to the next phase, test:
    - Switch between organizations
    - Verify events are isolated (can't see other org's events)
 
+### Registration Flow (Added Feb 2026)
+
+- **Ticket Types**
+  - `GET/POST /api/events/[id]/ticket-types` — list, create
+  - `GET/PUT/DELETE /api/events/[id]/ticket-types/[ticketId]` — get, update, delete
+  - UI: `/events/[id]/tickets/new` — create ticket type (name, price, currency, quantity)
+  - Validation: `src/lib/validations/ticket-type.ts`
+
+- **Registrations**
+  - `GET/POST /api/events/[id]/registrations` — list (with status filter), create
+  - `GET/PUT /api/events/[id]/registrations/[registrationId]` — get, update (e.g. confirm)
+  - UI: `/events/[id]/registrations` — list with status filters; `/events/[id]/registrations/new` — add attendee
+  - Create registration: firstName, lastName, email, ticketTypeId, channel (walkin/public/etc.)
+  - Confirmation token generated on create; sold count incremented for ticket type
+  - Validation: `src/lib/validations/registration.ts`
+
 ### Known Limitations / TODO
 
 1. **Event Editing** - No edit UI yet (API exists)
 2. **Session Editing** - No edit UI yet (API exists)
 3. **Session Detail Page** - Only listed on event page
-4. **Registration System** - Not implemented
+4. **Registration status update** - API exists; no UI to confirm/cancel yet
 5. **Check-in System** - Not implemented
-6. **Badge Generation** - Not implemented
-7. **Error Handling** - Basic alerts, needs better UX
-8. **Form Validation** - Client-side validation is minimal
+6. **Badge / QR** - Not implemented
+7. **Email confirmation** - Not implemented
+8. **Error Handling** - Basic alerts, needs better UX
 
-### Next Phase: Registration Flow
+### Next Phase
 
-To continue development:
+- Badge and QR code generation
+- Check-in stations and scanning
+- Email confirmation for registrations
 
-1. **Ticket Type Management**
-   - CRUD API for ticket types
-   - UI for creating/managing ticket types
-   - Pricing and capacity management
-
-2. **Registration Form**
-   - Public-facing registration form
-   - Session selection
-   - Payment integration (if needed)
-   - Email confirmation
-
-3. **Attendee Management**
-   - Registration list/detail pages
-   - Approval workflow
-   - Attendee search and filtering
-
-4. **QR Code Generation**
-   - Generate QR codes for confirmed registrations
-   - Badge PDF generation
-   - Email QR code to attendees
-
-See `ROADMAP.md` for detailed breakdown of remaining features.
+See `ROADMAP.md` for full breakdown.
 
 ---
 

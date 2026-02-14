@@ -21,10 +21,10 @@
   - [x] Validation with Zod schemas
   - [x] Event management UI (list, create, view)
   - [x] Session creation UI
-- [ ] Attendee registration flow
-  - [ ] Registration API endpoints
-  - [ ] Ticket type management
-  - [ ] Registration form UI
+- [x] Attendee registration flow
+  - [x] Registration API endpoints (create, list, get, update)
+  - [x] Ticket type management (CRUD API + create UI)
+  - [x] Registration form UI (list + add registration)
   - [ ] Email confirmation system
 - [ ] Badge & QR generation
   - [ ] QR code generation service
@@ -95,6 +95,6 @@
 - Tenant-scoped queries ✓
 
 **Next Up:**
-- Registration flow (ticket types, attendee registration)
 - Badge and QR code generation
 - Check-in stations and scanning
+- Email confirmation for registrations

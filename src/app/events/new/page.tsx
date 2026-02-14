@@ -58,6 +58,7 @@ export default function NewEventPage() {
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           name: formData.name,
           slug: formData.slug || undefined,
@@ -75,7 +76,12 @@ export default function NewEventPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create event");
+        // No active organization — send user to select one
+        if (response.status === 403 && (data.error === "No active organization" || data.message?.includes("organization"))) {
+          window.location.href = "/organizations";
+          return;
+        }
+        throw new Error(data.error || data.message || "Failed to create event");
       }
 
       // Redirect to the new event's page
