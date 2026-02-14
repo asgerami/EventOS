@@ -1,10 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { PrismaClient } from "@prisma/client";
 import { organization, admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/db";
 
 // Define RBAC roles and permissions
 const ac = createAccessControl({
