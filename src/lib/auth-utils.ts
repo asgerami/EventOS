@@ -31,15 +31,43 @@ export async function getActiveOrganization() {
   const session = await getSession();
   if (!session?.user) return null;
 
-  // better-auth organization plugin stores activeOrganizationId in session
-  // We need to fetch the full organization details
-  const activeOrgId = (session as any).activeOrganizationId;
-  
-  if (!activeOrgId) return null;
+  try {
+    // Get active org ID from session first (most reliable)
+    const rawSession = session.session as { activeOrganizationId?: string };
+    let organizationId = rawSession?.activeOrganizationId;
 
-  // TODO: Fetch organization from database
-  // For now, return the ID
-  return { id: activeOrgId };
+    // Fallback: use getActiveMember (response may be .data.organizationId or top-level .organizationId)
+    if (!organizationId) {
+      const activeMember = await auth.api.getActiveMember({
+        headers: await headers(),
+      });
+      organizationId =
+        (activeMember as any)?.data?.organizationId ??
+        (activeMember as any)?.organizationId;
+    }
+
+    if (!organizationId) {
+      console.log("[getActiveOrganization] No active organization in session");
+      return null;
+    }
+
+    // Fetch full organization from DB
+    const { prisma } = await import("@/lib/db");
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, name: true, slug: true, logo: true, metadata: true },
+    });
+
+    if (!organization) {
+      console.error("[getActiveOrganization] Organization not found in DB:", organizationId);
+      return null;
+    }
+
+    return organization;
+  } catch (error) {
+    console.error("[getActiveOrganization] Error:", error);
+    return null;
+  }
 }
 
 /**

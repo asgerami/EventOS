@@ -40,6 +40,16 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
     },
+    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+    secret: process.env.BETTER_AUTH_SECRET,
+    session: {
+        expiresIn: 60 * 60 * 24 * 7, // 7 days
+        updateAge: 60 * 60 * 24, // Update session every 24 hours
+        cookieCache: {
+            enabled: true,
+            maxAge: 60 * 5, // Cache for 5 minutes
+        },
+    },
     plugins: [
         organization({
             ac: ac,

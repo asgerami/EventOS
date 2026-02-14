@@ -51,6 +51,10 @@ model Session {
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Organization plugin field
+  activeOrganizationId String?
+
+  // Admin plugin field
   impersonatedBy String?
 
   @@map("session")
