@@ -61,14 +61,14 @@
   - [x] Live check-in metrics (today, total, registrations, capacity)
   - [x] Session attendance tracking (per-session check-ins + capacity %)
   - [x] Capacity monitoring (event + session level)
-- [ ] Offline scanning & sync
-  - [ ] Service worker implementation
-  - [ ] Local storage queue
-  - [ ] Background sync
-- [ ] Queue system (emails, badge gen)
-  - [ ] Background job processor
-  - [ ] Email queue with retry
-  - [ ] Badge generation queue
+- [x] Offline scanning & sync
+  - [x] Service worker (cache check-in page when visited)
+  - [x] Local queue (IndexedDB for failed check-ins)
+  - [x] Background sync (flush on online + Sync now button)
+- [x] Queue system (emails, badge gen)
+  - [x] Job table + process API (/api/cron/process-queue)
+  - [x] Email queue with retry (enqueue on send failure)
+  - [ ] Badge generation queue (optional)
 - [x] Reporting & exports
   - [x] CSV export (event registrations)
   - [x] Attendance reports (list + CSV per event)

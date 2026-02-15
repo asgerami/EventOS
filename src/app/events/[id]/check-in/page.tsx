@@ -13,7 +13,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ScanLine, Keyboard, CameraOff } from "lucide-react";
+import { ScanLine, Keyboard, CameraOff, CloudOff, RefreshCw } from "lucide-react";
+import {
+  addToOfflineQueue,
+  getOfflineQueue,
+  getOfflineQueueCount,
+  removeFromOfflineQueue,
+} from "@/lib/offline-checkin-queue";
 
 type Station = { id: string; name: string; type: string; _count: { checkIns: number } };
 
@@ -33,12 +39,15 @@ export default function CheckInPage() {
   const [cameraSupported, setCameraSupported] = useState<boolean | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingQueueCount, setPendingQueueCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanLoopRef = useRef<number | null>(null);
-  const submitTokenRef = useRef<(t: string) => Promise<void>>(() => Promise.resolve());
+  const submitTokenRef = useRef<(t: string, method?: "manual" | "qr_scan") => Promise<void>>(() => Promise.resolve());
 
   const fetchStats = useCallback(() => {
     fetch(`/api/events/${eventId}/check-in/stats`, { credentials: "include" })
@@ -122,7 +131,7 @@ export default function CheckInPage() {
                 setToken(value);
                 setScanMode("manual");
                 stopCamera();
-                submitTokenRef.current(value);
+                submitTokenRef.current(value, "qr_scan");
                 return;
               }
             }
@@ -161,7 +170,7 @@ export default function CheckInPage() {
   }, [scanMode, cameraSupported, stationId]);
 
   const handleCheckInWithToken = useCallback(
-    async (t: string) => {
+    async (t: string, method: "manual" | "qr_scan" = "manual") => {
       if (!stationId || !t.trim()) return;
       setLoading(true);
       setMessage(null);
@@ -173,7 +182,7 @@ export default function CheckInPage() {
           body: JSON.stringify({
             token: t.trim(),
             stationId,
-            method: "qr_scan",
+            method,
           }),
         });
         const data = await res.json();
@@ -195,7 +204,19 @@ export default function CheckInPage() {
           setMessage({ type: "error", text: data.error ?? "Check-in failed" });
         }
       } catch {
-        setMessage({ type: "error", text: "Network error" });
+        setMessage({ type: "error", text: "Network error. Queued for sync when online." });
+        try {
+          await addToOfflineQueue({
+            eventId,
+            stationId,
+            token: t.trim(),
+            method,
+          });
+          setToken("");
+          setPendingQueueCount(await getOfflineQueueCount());
+        } catch {
+          setMessage({ type: "error", text: "Network error. Could not queue." });
+        }
       } finally {
         setLoading(false);
       }
@@ -206,6 +227,71 @@ export default function CheckInPage() {
   useEffect(() => {
     submitTokenRef.current = handleCheckInWithToken;
   }, [handleCheckInWithToken]);
+
+  const refreshPendingCount = useCallback(() => {
+    getOfflineQueueCount().then(setPendingQueueCount);
+  }, []);
+
+  useEffect(() => {
+    refreshPendingCount();
+  }, [refreshPendingCount]);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+  const flushOfflineQueue = useCallback(async () => {
+    const items = await getOfflineQueue();
+    if (items.length === 0) {
+      setPendingQueueCount(0);
+      return;
+    }
+    setSyncing(true);
+    for (const item of items) {
+      if (item.eventId !== eventId) continue;
+      try {
+        const res = await fetch(`/api/events/${eventId}/check-in`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            token: item.token,
+            stationId: item.stationId,
+            method: item.method,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await removeFromOfflineQueue(item.id);
+          fetchStats();
+        } else if (res.status === 409 || res.status === 404 || res.status === 400) {
+          await removeFromOfflineQueue(item.id);
+        }
+      } catch {
+        break;
+      }
+    }
+    setPendingQueueCount(await getOfflineQueueCount());
+    setSyncing(false);
+  }, [eventId, fetchStats]);
+
+  useEffect(() => {
+    if (isOnline && pendingQueueCount > 0) flushOfflineQueue();
+  }, [isOnline, pendingQueueCount, flushOfflineQueue]);
 
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +343,30 @@ export default function CheckInPage() {
               <span className="block text-2xl font-bold tabular-nums">{stats.totalCount}</span>
               <span className="text-xs text-muted-foreground">Total</span>
             </div>
+          </div>
+        )}
+        {/* Offline / queue banner */}
+        {!isOnline && (
+          <div className="flex items-center gap-2 border-t bg-amber-500/10 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
+            <CloudOff className="h-4 w-4 shrink-0" />
+            <span>You&apos;re offline. Check-ins will be queued and synced when back online.</span>
+          </div>
+        )}
+        {isOnline && pendingQueueCount > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/60 px-4 py-2 text-sm">
+            <span className="text-muted-foreground">
+              {pendingQueueCount} check-in{pendingQueueCount !== 1 ? "s" : ""} queued
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={syncing}
+              onClick={() => flushOfflineQueue()}
+            >
+              <RefreshCw className={`h-4 w-4 shrink-0 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Syncing…" : "Sync now"}
+            </Button>
           </div>
         )}
       </header>

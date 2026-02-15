@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createRegistrationSchema } from "@/lib/validations/registration";
 import { sendTicketEmail } from "@/lib/email";
+import { enqueueJob } from "@/lib/queue";
 import { ZodError } from "zod";
 import { randomBytes } from "crypto";
 
@@ -86,13 +87,26 @@ export async function POST(
       process.env.BETTER_AUTH_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const ticketUrl = `${base}/ticket/${confirmationToken}`;
-    await sendTicketEmail({
+    const emailSent = await sendTicketEmail({
       to: registration.email,
       attendeeName: `${registration.firstName} ${registration.lastName}`,
       eventName: event.name,
       ticketUrl,
       ticketTypeName: registration.ticketType.name,
     });
+    if (!emailSent) {
+      try {
+        await enqueueJob("send_ticket_email", {
+          to: registration.email,
+          attendeeName: `${registration.firstName} ${registration.lastName}`,
+          eventName: event.name,
+          ticketUrl,
+          ticketTypeName: registration.ticketType.name,
+        });
+      } catch (e) {
+        console.error("[Queue] Failed to enqueue ticket email:", e);
+      }
+    }
 
     return NextResponse.json(
       {

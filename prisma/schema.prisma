@@ -323,3 +323,19 @@ model BadgeLog {
   printedAt      DateTime @default(now())
   reason         String // initial, lost, damaged, error
 }
+
+// Background job queue (emails, etc.)
+model Job {
+  id         String   @id @default(uuid())
+  type       String   // send_ticket_email, etc.
+  payload    Json     // type-specific payload
+  status     String   @default("pending") // pending, completed, failed
+  attempts   Int      @default(0)
+  maxAttempts Int     @default(5)
+  runAt      DateTime @default(now())
+  lastError  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([status, runAt])
+}
