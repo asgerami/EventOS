@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ScanLine, Keypad, CameraOff } from "lucide-react";
+import { ScanLine, Keyboard, CameraOff } from "lucide-react";
 
 type Station = { id: string; name: string; type: string; _count: { checkIns: number } };
 
@@ -323,7 +323,7 @@ export default function CheckInPage() {
               }`}
               disabled={loading}
             >
-              <Keypad className="h-5 w-5" />
+              <Keyboard className="h-5 w-5" />
               Enter code
             </button>
           </div>

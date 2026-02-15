@@ -81,6 +81,16 @@ export default async function EventRegistrationsPage({ params, searchParams }: P
                 Export CSV
               </a>
             </Button>
+            <Button asChild size="sm" variant="outline">
+              <a
+                href={`/api/events/${eventId}/registrations/export?format=pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                Export PDF
+              </a>
+            </Button>
             <Button asChild variant={!status ? "secondary" : "outline"} size="sm">
               <Link href={`/events/${eventId}/registrations`}>All</Link>
             </Button>

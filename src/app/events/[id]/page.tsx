@@ -265,6 +265,63 @@ export default async function EventPage({ params }: EventPageProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Revenue */}
+            {event.ticketTypes.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Revenue</CardTitle>
+                      <CardDescription>Sales by ticket type (price × sold)</CardDescription>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <a
+                        href={`/api/events/${event.id}/revenue/export?format=csv`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                      >
+                        Export CSV
+                      </a>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {event.ticketTypes.map((ticket) => {
+                      const priceNum = Number(ticket.price);
+                      const revenue = priceNum * ticket.sold;
+                      return (
+                        <div
+                          key={ticket.id}
+                          className="flex items-center justify-between rounded-lg border p-3"
+                        >
+                          <div>
+                            <h4 className="font-medium">{ticket.name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {ticket.sold} sold × {ticket.price.toString()} {ticket.currency}
+                            </p>
+                          </div>
+                          <p className="font-medium">
+                            {revenue.toFixed(2)} {ticket.currency}
+                          </p>
+                        </div>
+                      );
+                    })}
+                    <div className="flex items-center justify-between border-t pt-3 mt-3">
+                      <span className="font-medium">Total (all types)</span>
+                      <span className="font-medium">
+                        {event.ticketTypes
+                          .reduce((sum, t) => sum + Number(t.price) * t.sold, 0)
+                          .toFixed(2)}{" "}
+                        {event.ticketTypes[0]?.currency ?? ""}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}

@@ -72,8 +72,8 @@
 - [x] Reporting & exports
   - [x] CSV export (event registrations)
   - [x] Attendance reports (list + CSV per event)
-  - [ ] Revenue reports
-  - [ ] PDF exports
+  - [x] Revenue reports (per-event sales + CSV export)
+  - [x] PDF exports (registrations list per event)
 
 ## Phase 5: Verification & Polish
 - [ ] E2E tests & performance
