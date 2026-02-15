@@ -57,10 +57,10 @@
   - [x] Event information on register page
 
 ## Phase 4: Advanced Features
-- [ ] Real-time analytics dashboard
-  - [ ] Live check-in metrics
-  - [ ] Session attendance tracking
-  - [ ] Capacity monitoring
+- [x] Real-time analytics dashboard
+  - [x] Live check-in metrics (today, total, registrations, capacity)
+  - [x] Session attendance tracking (per-session check-ins + capacity %)
+  - [x] Capacity monitoring (event + session level)
 - [ ] Offline scanning & sync
   - [ ] Service worker implementation
   - [ ] Local storage queue

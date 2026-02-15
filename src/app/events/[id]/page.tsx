@@ -388,6 +388,9 @@ export default async function EventPage({ params }: EventPageProps) {
                   <Link href={`/events/${event.id}/attendance`}>Attendance report</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
+                  <Link href={`/events/${event.id}/analytics`}>Live analytics</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full">
                   <Link href={`/events/${event.id}/edit`}>Edit event</Link>
                 </Button>
               </CardContent>
