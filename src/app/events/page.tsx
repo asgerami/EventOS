@@ -33,14 +33,9 @@ export default async function EventsPage() {
           <h1 className="text-2xl font-semibold">Events</h1>
           <p className="text-muted-foreground">{organization.name}</p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/events/new">Create event</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard">Dashboard</Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/events/new">Create event</Link>
+        </Button>
       </header>
 
       {events.length === 0 ? (

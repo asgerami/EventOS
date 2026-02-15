@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAuth, getActiveOrganization, isSuperAdmin } from "@/lib/auth-utils";
 import { prisma } from "@/lib/db";
+import { AppNav } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,20 +19,26 @@ export default async function DashboardPage() {
   // If no active organization, show selection prompt (don't redirect to avoid loops)
   if (!organization) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>No organization selected</CardTitle>
-            <CardDescription>
-              Please select or create an organization to continue.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild className="w-full">
-              <Link href="/organizations">Select organization</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen flex-col">
+        <AppNav />
+        <div className="flex flex-1 flex-col items-center justify-center p-6">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Choose a workspace</CardTitle>
+              <CardDescription>
+                Your events live in a workspace (organization). Select one or create your first.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button asChild className="w-full">
+                <Link href="/organizations">Select or create workspace</Link>
+              </Button>
+              <Button asChild variant="ghost" className="w-full">
+                <Link href="/">Back to home</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -50,7 +57,9 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="min-h-screen p-6">
+    <div className="min-h-screen flex flex-col">
+      <AppNav />
+      <div className="flex-1 p-6">
       <header className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
@@ -65,10 +74,7 @@ export default async function DashboardPage() {
             </Button>
           )}
           <Button asChild variant="outline" size="sm">
-            <Link href="/organizations">Switch org</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/">Home</Link>
+            <Link href="/organizations">Switch workspace</Link>
           </Button>
         </div>
       </header>
@@ -142,6 +148,7 @@ export default async function DashboardPage() {
         <p>
           All data is scoped to <strong>{organization.name}</strong>.
         </p>
+      </div>
       </div>
     </div>
   );

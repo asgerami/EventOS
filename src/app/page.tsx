@@ -19,10 +19,13 @@ export default async function Home() {
           {session?.user ? (
             <>
               <Button asChild>
-                <Link href="/dashboard">Dashboard</Link>
+                <Link href="/events">Events</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/api/auth/sign-out">Sign out</Link>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <a href="/api/auth/sign-out">Sign out</a>
               </Button>
             </>
           ) : (

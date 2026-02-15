@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { AppNav } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/card";
 
 export default function OrganizationsPage() {
-  const router = useRouter();
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -66,8 +66,7 @@ export default function OrganizationsPage() {
       const session = await authClient.getSession();
       console.log("[SelectOrg] Session after setActive:", session);
       
-      // Wait longer for database write to complete (Neon serverless can be slow)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 600));
       
       // Do a hard navigation to ensure cookies are read
       console.log("[SelectOrg] Navigating to dashboard...");
@@ -110,12 +109,14 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col">
+      <AppNav />
+      <div className="flex flex-1 flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold">Select Organization</h1>
+          <h1 className="text-2xl font-semibold">Workspace</h1>
           <p className="text-muted-foreground">
-            Choose an organization to continue
+            Choose the workspace you want to work in
           </p>
         </div>
 
@@ -216,6 +217,7 @@ export default function OrganizationsPage() {
             </form>
           </Card>
         )}
+      </div>
       </div>
     </div>
   );

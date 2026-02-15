@@ -363,10 +363,10 @@ export default async function EventPage({ params }: EventPageProps) {
               </CardContent>
             </Card>
 
-            {/* Actions */}
+            {/* Actions – grouped for clarity */}
             <Card>
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle>Registrations & check-in</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button asChild className="w-full">
@@ -375,21 +375,31 @@ export default async function EventPage({ params }: EventPageProps) {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/stations`}>
-                    Stations
-                  </Link>
+                  <Link href={`/events/${event.id}/stations`}>Stations</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/check-in`}>
-                    Check-in station
-                  </Link>
+                  <Link href={`/events/${event.id}/check-in`}>Check-in station</Link>
                 </Button>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Reports</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
                 <Button asChild variant="outline" className="w-full">
                   <Link href={`/events/${event.id}/attendance`}>Attendance report</Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
                   <Link href={`/events/${event.id}/analytics`}>Live analytics</Link>
                 </Button>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <Button asChild variant="outline" className="w-full">
                   <Link href={`/events/${event.id}/edit`}>Edit event</Link>
                 </Button>

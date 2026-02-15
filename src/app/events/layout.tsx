@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getActiveOrganization } from "@/lib/auth-utils";
+import { AppNav } from "@/components/app-nav";
 
 /**
  * All routes under /events require an active organization.
@@ -16,5 +17,10 @@ export default async function EventsLayout({
     redirect("/organizations");
   }
 
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen flex flex-col">
+      <AppNav />
+      {children}
+    </div>
+  );
 }
