@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import QRCode from "qrcode";
 import { prisma } from "@/lib/db";
 
 /**
@@ -25,7 +26,6 @@ export async function GET(
   }
 
   try {
-    const QRCode = (await import("qrcode")).default;
     const png = await QRCode.toBuffer(token.trim(), {
       type: "png",
       width: 280,
