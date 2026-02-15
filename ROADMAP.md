@@ -26,15 +26,15 @@
   - [x] Ticket type management (CRUD API + create UI)
   - [x] Registration form UI (list + add registration)
   - [ ] Email confirmation system
-- [ ] Badge & QR generation
-  - [ ] QR code generation service
+- [x] Badge & QR generation
+  - [x] QR code for ticket (encode token, display on /ticket/[token])
   - [ ] Badge PDF generation
   - [ ] Custom badge templates
-- [ ] Scanning & check-in engine
-  - [ ] Check-in API endpoints
-  - [ ] Station management
-  - [ ] QR scanner UI
-  - [ ] Check-in validation logic
+- [x] Scanning & check-in engine
+  - [x] Check-in API (POST by token + stationId)
+  - [x] Station management (CRUD API + list/add UI)
+  - [x] Check-in UI (enter token, select station)
+  - [x] Check-in validation (duplicate check, valid token)
 
 ## Phase 3: Frontend
 - [ ] Super Admin dashboard
@@ -44,17 +44,17 @@
 - [x] Host dashboard (basic)
   - [x] Organization switcher
   - [x] Event management interface
-  - [ ] Analytics widgets
-  - [ ] Quick actions
+  - [x] Analytics widgets (event count, registration count, recent events)
+  - [x] Quick actions (event edit, copy ticket link, CSV export)
 - [ ] Staff scanning interface
   - [ ] Mobile-optimized scanner
   - [ ] Offline mode support
   - [ ] Real-time check-in stats
-- [ ] Attendee portal
-  - [ ] Registration interface
-  - [ ] Ticket/QR display
-  - [ ] Session selection
-  - [ ] Event information
+- [x] Attendee portal (basic)
+  - [x] Public registration interface (/register/[eventId])
+  - [x] Ticket/QR display (/ticket/[token])
+  - [ ] Session selection (optional in form)
+  - [x] Event information on register page
 
 ## Phase 4: Advanced Features
 - [ ] Real-time analytics dashboard
@@ -69,10 +69,11 @@
   - [ ] Background job processor
   - [ ] Email queue with retry
   - [ ] Badge generation queue
-- [ ] Reporting & exports
+- [x] Reporting & exports
+  - [x] CSV export (event registrations)
   - [ ] Attendance reports
   - [ ] Revenue reports
-  - [ ] CSV/PDF exports
+  - [ ] PDF exports
 
 ## Phase 5: Verification & Polish
 - [ ] E2E tests & performance
@@ -95,6 +96,6 @@
 - Tenant-scoped queries ✓
 
 **Next Up:**
-- Badge and QR code generation
-- Check-in stations and scanning
+- Badge PDF generation
 - Email confirmation for registrations
+- Staff scanning interface (mobile/offline)

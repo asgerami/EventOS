@@ -318,6 +318,11 @@ export default async function EventPage({ params }: EventPageProps) {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full">
+                  <Link href={`/events/${event.id}/stations`}>
+                    Stations
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full">
                   <Link href={`/events/${event.id}/check-in`}>
                     Check-in station
                   </Link>
@@ -327,6 +332,28 @@ export default async function EventPage({ params }: EventPageProps) {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Public registration */}
+            {(event.status === "PUBLISHED" || event.status === "ONGOING") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Public registration</CardTitle>
+                  <CardDescription>
+                    Share this link so attendees can register
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <code className="block break-all rounded bg-muted px-2 py-1 text-xs">
+                    /register/{event.id}
+                  </code>
+                  <Button asChild size="sm" className="mt-2 w-full">
+                    <Link href={`/register/${event.id}`} target="_blank" rel="noopener noreferrer">
+                      Open registration page
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Metadata */}
             <Card>

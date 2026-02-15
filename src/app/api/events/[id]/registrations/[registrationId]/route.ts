@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withTenantHandler } from "@/lib/api-middleware";
 import { prisma } from "@/lib/db";
 import { updateRegistrationSchema } from "@/lib/validations/registration";
+import { sendTicketEmail } from "@/lib/email";
 import { ZodError } from "zod";
 
 /**
@@ -73,6 +74,19 @@ export const PUT = withTenantHandler(
           ticketType: { select: { id: true, name: true, price: true, currency: true } },
         },
       });
+
+      // Optional: send ticket email when staff confirms (fire-and-forget)
+      if (data.status === "CONFIRMED" && !existing.confirmedAt && registration.confirmationToken) {
+        const base = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+        const ticketUrl = `${base}/ticket/${registration.confirmationToken}`;
+        sendTicketEmail({
+          to: registration.email,
+          attendeeName: `${registration.firstName} ${registration.lastName}`,
+          eventName: event.name,
+          ticketUrl,
+          ticketTypeName: registration.ticketType.name,
+        }).catch((e) => console.error("[Email] Ticket on confirm failed:", e));
+      }
 
       return NextResponse.json({ registration });
     } catch (error) {

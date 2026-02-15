@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CopyTicketLinkButton } from "./CopyTicketLinkButton";
+import { RegistrationStatusActions } from "./RegistrationStatusActions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -65,9 +67,19 @@ export default async function EventRegistrationsPage({ params, searchParams }: P
         </header>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button asChild size="sm">
               <Link href={`/events/${eventId}/registrations/new`}>Add registration</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a
+                href={`/api/events/${eventId}/registrations/export?format=csv`}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                Export CSV
+              </a>
             </Button>
             <Button asChild variant={!status ? "secondary" : "outline"} size="sm" asChild>
               <Link href={`/events/${eventId}/registrations`}>All</Link>
@@ -115,9 +127,20 @@ export default async function EventRegistrationsPage({ params, searchParams }: P
                         {r.ticketType.name} · {new Date(r.registeredAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <Badge className={statusColors[r.status] ?? "bg-gray-500"}>
-                      {r.status}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <RegistrationStatusActions
+                        eventId={eventId}
+                        registrationId={r.id}
+                        currentStatus={r.status}
+                      />
+                      <CopyTicketLinkButton
+                        eventId={eventId}
+                        registrationId={r.id}
+                      />
+                      <Badge className={statusColors[r.status] ?? "bg-gray-500"}>
+                        {r.status}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
