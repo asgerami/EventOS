@@ -10,7 +10,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  ArrowLeft,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  Edit,
+  ExternalLink,
+  MapPin,
+  QrCode,
+  Radio,
+  Ticket,
+  Users,
+} from "lucide-react";
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -18,202 +31,180 @@ interface EventPageProps {
 
 export default async function EventPage({ params }: EventPageProps) {
   const { id } = await params;
-  const session = await requireAuth();
+  await requireAuth();
   const organization = await getActiveOrganization();
 
-  if (!organization) {
-    redirect("/organizations");
-  }
+  if (!organization) redirect("/organizations");
 
-  // Fetch event with tenant isolation
   const event = await prisma.event.findFirst({
-    where: {
-      id,
-      tenantId: organization.id,
-      deletedAt: null,
-    },
+    where: { id, tenantId: organization.id, deletedAt: null },
     include: {
       sessions: {
-        select: {
-          id: true,
-          name: true,
-          startTime: true,
-          endTime: true,
-          capacity: true,
-          type: true,
-        },
+        select: { id: true, name: true, startTime: true, endTime: true, capacity: true, type: true },
         orderBy: { startTime: "asc" },
       },
       ticketTypes: {
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          currency: true,
-          quantity: true,
-          sold: true,
-        },
+        select: { id: true, name: true, price: true, currency: true, quantity: true, sold: true },
       },
-      _count: {
-        select: {
-          registrations: true,
-          stations: true,
-        },
-      },
+      _count: { select: { registrations: true, stations: true } },
     },
   });
 
-  if (!event) {
-    redirect("/events");
-  }
+  if (!event) redirect("/events");
 
   const location = event.location as any;
-  const statusColors = {
-    DRAFT: "bg-gray-500",
-    PUBLISHED: "bg-blue-500",
-    ONGOING: "bg-green-500",
-    COMPLETED: "bg-purple-500",
-    CANCELLED: "bg-red-500",
+
+  const statusClass: Record<string, string> = {
+    DRAFT: "status-draft",
+    PUBLISHED: "status-published",
+    ONGOING: "status-ongoing",
+    COMPLETED: "status-completed",
+    CANCELLED: "status-cancelled",
   };
 
+  const statusGradient: Record<string, string> = {
+    DRAFT: "from-zinc-400 to-zinc-500",
+    PUBLISHED: "from-blue-500 to-indigo-500",
+    ONGOING: "from-emerald-500 to-teal-500",
+    COMPLETED: "from-violet-500 to-purple-500",
+    CANCELLED: "from-red-500 to-rose-500",
+  };
+
+  const totalRevenue = event.ticketTypes.reduce((sum, t) => sum + Number(t.price) * t.sold, 0);
+
   return (
-    <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-5xl">
+    <div className="flex-1 p-4 sm:p-6">
+      <div className="mx-auto max-w-6xl">
+        {/* ── Header ── */}
         <header className="mb-8">
-          <Button asChild variant="ghost" size="sm" className="mb-4">
-            <Link href="/events">← Back to events</Link>
+          <Button asChild variant="ghost" size="sm" className="mb-4 rounded-lg">
+            <Link href="/events">
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+              Back to events
+            </Link>
           </Button>
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold">{event.name}</h1>
-              <p className="text-muted-foreground">
-                {new Date(event.startDate).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{event.name}</h1>
+                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusClass[event.status] ?? "status-draft"}`}>
+                  {event.status}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {new Date(event.startDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                </span>
+                {location?.city && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {location.venue ? `${location.venue}, ${location.city}` : location.city}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Badge className={statusColors[event.status]}>
-                {event.status}
-              </Badge>
-            </div>
+            <Button asChild variant="outline" size="sm" className="shrink-0 rounded-lg">
+              <Link href={`/events/${event.id}/edit`}>
+                <Edit className="mr-1.5 h-3.5 w-3.5" />
+                Edit event
+              </Link>
+            </Button>
           </div>
+
+          {/* Status bar */}
+          <div className={`mt-4 h-1 w-full rounded-full bg-linear-to-r ${statusGradient[event.status] ?? statusGradient.DRAFT}`} />
         </header>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
+          {/* ── Main column ── */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Quick stat chips */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: "Registrations", value: event._count.registrations, icon: Users, color: "text-violet-500" },
+                { label: "Sessions", value: event.sessions.length, icon: Radio, color: "text-blue-500" },
+                { label: "Stations", value: event._count.stations, icon: QrCode, color: "text-emerald-500" },
+                { label: "Revenue", value: `$${totalRevenue.toFixed(0)}`, icon: Ticket, color: "text-amber-500" },
+              ].map((stat) => {
+                const Icon = stat.icon;
+                return (
+                  <Card key={stat.label} className="card-hover-glow">
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Icon className={`h-4 w-4 ${stat.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold tracking-tight">{stat.value}</p>
+                        <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
             {/* Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {event.description && (
-                  <div>
-                    <h3 className="mb-2 font-medium">Description</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {event.description}
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium">Start date</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(event.startDate).toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium">End date</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(event.endDate).toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium">Timezone</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {event.timezone}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium">Capacity</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {event.capacity === 0 ? "Unlimited" : event.capacity}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium">Visibility</h3>
-                    <p className="text-sm capitalize text-muted-foreground">
-                      {event.visibility}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium">Slug</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {event.slug}
-                    </p>
-                  </div>
-                </div>
-
-                {location && (
-                  <div>
-                    <h3 className="mb-2 font-medium">Location</h3>
-                    <div className="text-sm text-muted-foreground">
-                      {location.venue && <p>{location.venue}</p>}
-                      {location.address && <p>{location.address}</p>}
-                      {(location.city || location.country) && (
-                        <p>
-                          {location.city}
-                          {location.city && location.country && ", "}
-                          {location.country}
-                        </p>
-                      )}
+            {event.description && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{event.description}</p>
+                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Start</p>
+                      <p className="font-medium">{new Date(event.startDate).toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">End</p>
+                      <p className="font-medium">{new Date(event.endDate).toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Capacity</p>
+                      <p className="font-medium">{event.capacity === 0 ? "Unlimited" : event.capacity}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Timezone</p>
+                      <p className="font-medium">{event.timezone}</p>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Sessions */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Sessions ({event.sessions.length})</CardTitle>
-                  <Button asChild size="sm">
-                    <Link href={`/events/${event.id}/sessions/new`}>
-                      Add session
-                    </Link>
+                  <Button asChild size="sm" className="btn-gradient rounded-lg text-xs">
+                    <Link href={`/events/${event.id}/sessions/new`}>Add session</Link>
                   </Button>
                 </div>
-                <CardDescription>
-                  Individual sessions and activities within this event
-                </CardDescription>
+                <CardDescription>Individual tracks and activities</CardDescription>
               </CardHeader>
               <CardContent>
                 {event.sessions.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-8">
-                    No sessions yet. Add your first session to get started.
-                  </p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">No sessions yet.</p>
                 ) : (
-                  <div className="space-y-3">
-                    {event.sessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div>
-                          <h4 className="font-medium">{session.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(session.startTime).toLocaleString()} -{" "}
-                            {new Date(session.endTime).toLocaleTimeString()}
-                          </p>
+                  <div className="space-y-2">
+                    {event.sessions.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between rounded-xl border p-3 transition-colors hover:bg-muted/40">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+                            <Radio className="h-3.5 w-3.5 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{s.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(s.startTime).toLocaleString()} – {new Date(s.endTime).toLocaleTimeString()}
+                            </p>
+                          </div>
                         </div>
-                        <Badge variant="outline">{session.type}</Badge>
+                        <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium">{s.type}</span>
                       </div>
                     ))}
                   </div>
@@ -221,207 +212,127 @@ export default async function EventPage({ params }: EventPageProps) {
               </CardContent>
             </Card>
 
-            {/* Ticket Types */}
+            {/* Ticket types */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>
-                    Ticket types ({event.ticketTypes.length})
-                  </CardTitle>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/events/${event.id}/tickets/new`}>
-                      Add ticket type
-                    </Link>
+                  <CardTitle>Ticket types ({event.ticketTypes.length})</CardTitle>
+                  <Button asChild size="sm" variant="outline" className="rounded-lg text-xs">
+                    <Link href={`/events/${event.id}/tickets/new`}>Add ticket type</Link>
                   </Button>
                 </div>
-                <CardDescription>
-                  Registration ticket types and pricing
-                </CardDescription>
+                <CardDescription>Registration tiers and pricing</CardDescription>
               </CardHeader>
               <CardContent>
                 {event.ticketTypes.length === 0 ? (
-                  <p className="text-center text-sm text-muted-foreground py-8">
-                    No ticket types yet. Add ticket types to enable registration.
-                  </p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">No ticket types yet.</p>
                 ) : (
-                  <div className="space-y-3">
-                    {event.ticketTypes.map((ticket) => (
-                      <div
-                        key={ticket.id}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div>
-                          <h4 className="font-medium">{ticket.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {ticket.sold} / {ticket.quantity} sold
-                          </p>
+                  <div className="space-y-2">
+                    {event.ticketTypes.map((ticket) => {
+                      const pct = ticket.quantity > 0 ? (ticket.sold / ticket.quantity) * 100 : 0;
+                      return (
+                        <div key={ticket.id} className="rounded-xl border p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+                                <Ticket className="h-3.5 w-3.5 text-amber-500" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{ticket.name}</p>
+                                <p className="text-xs text-muted-foreground">{ticket.sold} / {ticket.quantity} sold</p>
+                              </div>
+                            </div>
+                            <p className="text-sm font-semibold">{ticket.price.toString()} {ticket.currency}</p>
+                          </div>
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-linear-to-r from-amber-500 to-orange-500 transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
+                          </div>
                         </div>
-                        <p className="font-medium">
-                          {ticket.price.toString()} {ticket.currency}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    {/* Revenue total */}
+                    <div className="mt-3 flex items-center justify-between border-t pt-3">
+                      <span className="text-sm font-medium">Total revenue</span>
+                      <span className="text-sm font-bold">{totalRevenue.toFixed(2)} {event.ticketTypes[0]?.currency ?? ""}</span>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
-
-            {/* Revenue */}
-            {event.ticketTypes.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Revenue</CardTitle>
-                      <CardDescription>Sales by ticket type (price × sold)</CardDescription>
-                    </div>
-                    <Button asChild size="sm" variant="outline">
-                      <a
-                        href={`/api/events/${event.id}/revenue/export?format=csv`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download
-                      >
-                        Export CSV
-                      </a>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {event.ticketTypes.map((ticket) => {
-                      const priceNum = Number(ticket.price);
-                      const revenue = priceNum * ticket.sold;
-                      return (
-                        <div
-                          key={ticket.id}
-                          className="flex items-center justify-between rounded-lg border p-3"
-                        >
-                          <div>
-                            <h4 className="font-medium">{ticket.name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {ticket.sold} sold × {ticket.price.toString()} {ticket.currency}
-                            </p>
-                          </div>
-                          <p className="font-medium">
-                            {revenue.toFixed(2)} {ticket.currency}
-                          </p>
-                        </div>
-                      );
-                    })}
-                    <div className="flex items-center justify-between border-t pt-3 mt-3">
-                      <span className="font-medium">Total (all types)</span>
-                      <span className="font-medium">
-                        {event.ticketTypes
-                          .reduce((sum, t) => sum + Number(t.price) * t.sold, 0)
-                          .toFixed(2)}{" "}
-                        {event.ticketTypes[0]?.currency ?? ""}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <Card>
+          {/* ── Sidebar ── */}
+          <div className="space-y-4">
+            {/* Quick actions */}
+            <Card className="overflow-hidden">
+              <div className="h-1 bg-linear-to-r from-violet-500 to-indigo-500" />
               <CardHeader>
-                <CardTitle>Quick stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Registrations
-                  </span>
-                  <span className="font-medium">
-                    {event._count.registrations}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Sessions
-                  </span>
-                  <span className="font-medium">{event.sessions.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Stations
-                  </span>
-                  <span className="font-medium">{event._count.stations}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Ticket types
-                  </span>
-                  <span className="font-medium">
-                    {event.ticketTypes.length}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions – grouped for clarity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Registrations & check-in</CardTitle>
+                <CardTitle className="text-base">Registrations & check-in</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button asChild className="w-full">
+                <Button asChild className="btn-gradient w-full rounded-lg text-sm">
                   <Link href={`/events/${event.id}/registrations`}>
+                    <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
                     View registrations
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/stations`}>Stations</Link>
+                <Button asChild variant="outline" className="w-full rounded-lg text-sm">
+                  <Link href={`/events/${event.id}/stations`}>
+                    <QrCode className="mr-1.5 h-3.5 w-3.5" />
+                    Stations
+                  </Link>
                 </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/check-in`}>Check-in station</Link>
-                </Button>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Reports</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/attendance`}>Attendance report</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/analytics`}>Live analytics</Link>
-                </Button>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/events/${event.id}/edit`}>Edit event</Link>
+                <Button asChild variant="outline" className="w-full rounded-lg text-sm">
+                  <Link href={`/events/${event.id}/check-in`}>
+                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                    Check-in station
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Public registration */}
+            <Card className="overflow-hidden">
+              <div className="h-1 bg-linear-to-r from-blue-500 to-cyan-500" />
+              <CardHeader>
+                <CardTitle className="text-base">Reports</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button asChild variant="outline" className="w-full rounded-lg text-sm">
+                  <Link href={`/events/${event.id}/attendance`}>
+                    <Users className="mr-1.5 h-3.5 w-3.5" />
+                    Attendance report
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full rounded-lg text-sm">
+                  <Link href={`/events/${event.id}/analytics`}>
+                    <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                    Live analytics
+                  </Link>
+                </Button>
+                {event.ticketTypes.length > 0 && (
+                  <Button asChild variant="outline" className="w-full rounded-lg text-sm">
+                    <a href={`/api/events/${event.id}/revenue/export?format=csv`} target="_blank" rel="noopener noreferrer" download>
+                      <Ticket className="mr-1.5 h-3.5 w-3.5" />
+                      Export revenue CSV
+                    </a>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Public registration link */}
             {(event.status === "PUBLISHED" || event.status === "ONGOING") && (
-              <Card>
+              <Card className="overflow-hidden">
+                <div className="h-1 bg-linear-to-r from-emerald-500 to-teal-500" />
                 <CardHeader>
-                  <CardTitle>Public registration</CardTitle>
-                  <CardDescription>
-                    Share this link so attendees can register
-                  </CardDescription>
+                  <CardTitle className="text-base">Public registration</CardTitle>
+                  <CardDescription>Share this link with attendees</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <code className="block break-all rounded bg-muted px-2 py-1 text-xs">
-                    /register/{event.id}
-                  </code>
-                  <Button asChild size="sm" className="mt-2 w-full">
+                  <code className="block break-all rounded-lg bg-muted px-3 py-2 text-xs">/register/{event.id}</code>
+                  <Button asChild size="sm" className="btn-gradient mt-3 w-full rounded-lg">
                     <Link href={`/register/${event.id}`} target="_blank" rel="noopener noreferrer">
-                      Open registration page
+                      Open page <ExternalLink className="ml-1.5 h-3 w-3" />
                     </Link>
                   </Button>
                 </CardContent>
@@ -431,20 +342,20 @@ export default async function EventPage({ params }: EventPageProps) {
             {/* Metadata */}
             <Card>
               <CardHeader>
-                <CardTitle>Metadata</CardTitle>
+                <CardTitle className="text-base">Metadata</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Created:</span>{" "}
-                  {new Date(event.createdAt).toLocaleDateString()}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Created</span>
+                  <span>{new Date(event.createdAt).toLocaleDateString()}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">Last updated:</span>{" "}
-                  {new Date(event.updatedAt).toLocaleDateString()}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span>{new Date(event.updatedAt).toLocaleDateString()}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground">ID:</span>{" "}
-                  <code className="text-xs">{event.id}</code>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">ID</span>
+                  <code className="text-xs text-muted-foreground">{event.id.slice(0, 12)}…</code>
                 </div>
               </CardContent>
             </Card>
