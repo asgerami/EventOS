@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireAuth, getActiveOrganization } from "@/lib/auth-utils";
+import { requireAuth, getActiveOrganization, isSuperAdmin } from "@/lib/auth-utils";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
 export default async function DashboardPage() {
   const session = await requireAuth();
   const organization = await getActiveOrganization();
+  const showAdmin = await isSuperAdmin();
 
   // If no active organization, show selection prompt (don't redirect to avoid loops)
   if (!organization) {
@@ -59,6 +59,11 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {showAdmin && (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin">Super Admin</Link>
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link href="/organizations">Switch org</Link>
           </Button>

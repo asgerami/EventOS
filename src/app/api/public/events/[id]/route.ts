@@ -37,6 +37,18 @@ export async function GET(
           sold: true,
         },
       },
+      sessions: {
+        orderBy: { startTime: "asc" },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          startTime: true,
+          endTime: true,
+          track: true,
+          room: true,
+        },
+      },
     },
   });
 
@@ -48,6 +60,7 @@ export async function GET(
     event: {
       ...event,
       ticketTypes: event.ticketTypes.filter((t) => t.sold < t.quantity),
+      sessions: event.sessions ?? [],
     },
   });
 }

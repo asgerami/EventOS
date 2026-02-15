@@ -77,10 +77,33 @@ export async function getActiveOrganization() {
 export async function requireOrganization() {
   const session = await requireAuth();
   const org = await getActiveOrganization();
-  
+
   if (!org) {
     redirect("/organizations");
   }
-  
+
   return { session, organization: org };
+}
+
+/**
+ * Require the current user to be Super Admin (email in SUPER_ADMIN_EMAIL env).
+ * Redirects to dashboard if not allowed.
+ */
+export async function requireSuperAdmin() {
+  const session = await requireAuth();
+  const adminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  if (!adminEmail || session.user?.email?.toLowerCase() !== adminEmail) {
+    redirect("/dashboard");
+  }
+  return session;
+}
+
+/**
+ * Check if the current user is Super Admin (for conditional UI).
+ */
+export async function isSuperAdmin() {
+  const session = await getSession();
+  if (!session?.user?.email) return false;
+  const adminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  return !!adminEmail && session.user.email.toLowerCase() === adminEmail;
 }

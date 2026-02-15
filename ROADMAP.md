@@ -37,23 +37,23 @@
   - [x] Check-in validation (duplicate check, valid token)
 
 ## Phase 3: Frontend
-- [ ] Super Admin dashboard
-  - [ ] Tenant management
-  - [ ] System-wide analytics
-  - [ ] User management
+- [x] Super Admin dashboard
+  - [x] Tenant management (list orgs, event/member counts)
+  - [x] System-wide analytics (totals)
+  - [ ] User management (list users across tenants)
 - [x] Host dashboard (basic)
   - [x] Organization switcher
   - [x] Event management interface
   - [x] Analytics widgets (event count, registration count, recent events)
   - [x] Quick actions (event edit, copy ticket link, CSV export)
-- [ ] Staff scanning interface
-  - [ ] Mobile-optimized scanner
+- [x] Staff scanning interface
+  - [x] Mobile-optimized scanner
   - [ ] Offline mode support
-  - [ ] Real-time check-in stats
+  - [x] Real-time check-in stats
 - [x] Attendee portal (basic)
   - [x] Public registration interface (/register/[eventId])
   - [x] Ticket/QR display (/ticket/[token])
-  - [ ] Session selection (optional in form)
+  - [x] Session selection (optional in form)
   - [x] Event information on register page
 
 ## Phase 4: Advanced Features
@@ -71,7 +71,7 @@
   - [ ] Badge generation queue
 - [x] Reporting & exports
   - [x] CSV export (event registrations)
-  - [ ] Attendance reports
+  - [x] Attendance reports (list + CSV per event)
   - [ ] Revenue reports
   - [ ] PDF exports
 

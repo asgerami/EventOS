@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ScanLine, Keypad, CameraOff } from "lucide-react";
 
 type Station = { id: string; name: string; type: string; _count: { checkIns: number } };
 
+const STATS_POLL_INTERVAL_MS = 5000;
+
 export default function CheckInPage() {
   const params = useParams();
-  const router = useRouter();
   const eventId = params.id as string;
 
   const [stations, setStations] = useState<Station[]>([]);
@@ -27,17 +29,28 @@ export default function CheckInPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [stats, setStats] = useState<{ todayCount: number; totalCount: number } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [scanMode, setScanMode] = useState<"manual" | "camera">("manual");
+  const [cameraSupported, setCameraSupported] = useState<boolean | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
 
-  const fetchStats = () => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanLoopRef = useRef<number | null>(null);
+  const submitTokenRef = useRef<(t: string) => Promise<void>>(() => Promise.resolve());
+
+  const fetchStats = useCallback(() => {
     fetch(`/api/events/${eventId}/check-in/stats`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
-        if (data.todayCount !== undefined) setStats({ todayCount: data.todayCount, totalCount: data.totalCount });
+        if (data.todayCount !== undefined)
+          setStats({ todayCount: data.todayCount, totalCount: data.totalCount });
       })
       .catch(() => {});
-  };
+  }, [eventId]);
 
+  // Load stations and initial stats
   useEffect(() => {
     fetch(`/api/events/${eventId}/stations`)
       .then((res) => res.json())
@@ -49,7 +62,150 @@ export default function CheckInPage() {
       })
       .catch(() => setMessage({ type: "error", text: "Failed to load stations" }));
     fetchStats();
-  }, [eventId]);
+  }, [eventId, fetchStats]);
+
+  // Real-time stats polling (pause when tab hidden)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchStats();
+      }
+    }, STATS_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  // BarcodeDetector support (Chrome, Edge, Android; not Safari)
+  useEffect(() => {
+    setCameraSupported(
+      typeof window !== "undefined" &&
+        "BarcodeDetector" in window &&
+        typeof (window as unknown as { BarcodeDetector?: unknown }).BarcodeDetector === "function"
+    );
+  }, []);
+
+  // Camera stream and scan loop
+  useEffect(() => {
+    if (scanMode !== "camera" || !cameraSupported || !videoRef.current || !stationId) return;
+
+    let cancelled = false;
+    const video = videoRef.current;
+
+    const startCamera = async () => {
+      setCameraError(null);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        video.srcObject = stream;
+        await video.play();
+        setCameraActive(true);
+
+        const BarcodeDetector = (window as unknown as { BarcodeDetector: new () => BarcodeDetector })
+          .BarcodeDetector;
+        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+
+        const detect = async () => {
+          if (cancelled || !video.srcObject || video.readyState < 2) {
+            scanLoopRef.current = requestAnimationFrame(detect);
+            return;
+          }
+          try {
+            const codes = await detector.detect(video);
+            if (codes.length > 0 && codes[0].rawValue) {
+              const value = codes[0].rawValue.trim();
+              if (value) {
+                setToken(value);
+                setScanMode("manual");
+                stopCamera();
+                submitTokenRef.current(value);
+                return;
+              }
+            }
+          } catch {
+            // ignore single-frame errors
+          }
+          scanLoopRef.current = requestAnimationFrame(detect);
+        };
+        scanLoopRef.current = requestAnimationFrame(detect);
+      } catch (e) {
+        if (!cancelled) {
+          setCameraError(
+            e instanceof Error ? e.message : "Could not access camera. Use manual entry."
+          );
+          setCameraActive(false);
+        }
+      }
+    };
+
+    const stopCamera = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (video.srcObject) video.srcObject = null;
+      if (scanLoopRef.current) cancelAnimationFrame(scanLoopRef.current);
+      scanLoopRef.current = null;
+      setCameraActive(false);
+    };
+
+    startCamera();
+    return () => {
+      cancelled = true;
+      stopCamera();
+    };
+  }, [scanMode, cameraSupported, stationId]);
+
+  const handleCheckInWithToken = useCallback(
+    async (t: string) => {
+      if (!stationId || !t.trim()) return;
+      setLoading(true);
+      setMessage(null);
+      try {
+        const res = await fetch(`/api/events/${eventId}/check-in`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            token: t.trim(),
+            stationId,
+            method: "qr_scan",
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setMessage({
+            type: "success",
+            text: `Checked in: ${data.attendee?.name ?? "Attendee"}`,
+          });
+          setToken("");
+          fetchStats();
+          inputRef.current?.focus();
+        } else if (res.status === 409 && data.alreadyCheckedIn) {
+          setMessage({
+            type: "error",
+            text: `Already checked in: ${data.attendee ?? "Attendee"}`,
+          });
+          setToken("");
+        } else {
+          setMessage({ type: "error", text: data.error ?? "Check-in failed" });
+        }
+      } catch {
+        setMessage({ type: "error", text: "Network error" });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [eventId, stationId, fetchStats]
+  );
+
+  useEffect(() => {
+    submitTokenRef.current = handleCheckInWithToken;
+  }, [handleCheckInWithToken]);
 
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,148 +218,207 @@ export default function CheckInPage() {
       setMessage({ type: "error", text: "Select a station first" });
       return;
     }
+    await handleCheckInWithToken(t);
+  };
 
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const res = await fetch(`/api/events/${eventId}/check-in`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          token: t,
-          stationId,
-          method: "manual",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setMessage({
-          type: "success",
-          text: `Checked in: ${data.attendee?.name ?? "Attendee"}`,
-        });
-        setToken("");
-        fetchStats();
-        inputRef.current?.focus();
-      } else if (res.status === 409 && data.alreadyCheckedIn) {
-        setMessage({
-          type: "error",
-          text: `Already checked in: ${data.attendee ?? "Attendee"}`,
-        });
-        setToken("");
-      } else {
-        setMessage({
-          type: "error",
-          text: data.error ?? "Check-in failed",
-        });
-      }
-    } catch {
-      setMessage({ type: "error", text: "Network error" });
-    } finally {
-      setLoading(false);
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
+    if (videoRef.current?.srcObject) videoRef.current.srcObject = null;
+    if (scanLoopRef.current) cancelAnimationFrame(scanLoopRef.current);
+    scanLoopRef.current = null;
+    setCameraActive(false);
+    setScanMode("manual");
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-lg">
-        <header className="mb-8">
-          <Button asChild variant="ghost" size="sm" className="mb-4">
-            <Link href={`/events/${eventId}`}>← Back to event</Link>
+    <div className="min-h-screen bg-background pb-safe">
+      {/* Sticky header - mobile friendly */}
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[padding:env(safe-area-inset-top)]:pt-[env(safe-area-inset-top)]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <Button asChild variant="ghost" size="icon" className="shrink-0 -ml-1">
+            <Link href={`/events/${eventId}`}>←</Link>
           </Button>
-          <h1 className="text-3xl font-semibold">Check-in</h1>
-          <p className="text-muted-foreground">
-            Scan or enter ticket code to check in attendees
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-semibold">Check-in</h1>
+            <p className="truncate text-xs text-muted-foreground">Scan or enter ticket code</p>
+          </div>
+        </div>
+        {/* Real-time stats bar */}
+        {stats !== null && (
+          <div className="grid grid-cols-2 gap-2 border-t px-4 py-3">
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <span className="block text-2xl font-bold tabular-nums">{stats.todayCount}</span>
+              <span className="text-xs text-muted-foreground">Today</span>
+            </div>
+            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
+              <span className="block text-2xl font-bold tabular-nums">{stats.totalCount}</span>
+              <span className="text-xs text-muted-foreground">Total</span>
+            </div>
+          </div>
+        )}
+      </header>
+
+      <main className="mx-auto max-w-lg px-4 py-4">
+        {/* Station selector */}
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Station</CardTitle>
+            <CardDescription>Select the check-in station</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No stations yet.{" "}
+                <Link href={`/events/${eventId}/stations/new`} className="underline">
+                  Add a station
+                </Link>{" "}
+                first.
+              </p>
+            ) : (
+              <select
+                className="flex h-12 w-full rounded-md border border-input bg-background px-4 py-2 text-base"
+                value={stationId}
+                onChange={(e) => setStationId(e.target.value)}
+                disabled={loading}
+              >
+                {stations.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.type}) — {s._count.checkIns} check-ins
+                  </option>
+                ))}
+              </select>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Scan mode toggle: Camera (if supported) vs Manual */}
+        {cameraSupported === true && (
+          <div className="mb-4 flex rounded-lg border bg-muted/30 p-1">
+            <button
+              type="button"
+              onClick={() => setScanMode("camera")}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-3 text-sm font-medium transition-colors ${
+                scanMode === "camera"
+                  ? "bg-background text-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              disabled={loading || stations.length === 0}
+            >
+              <ScanLine className="h-5 w-5" />
+              Scan QR
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                stopCamera();
+                setScanMode("manual");
+              }}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-3 text-sm font-medium transition-colors ${
+                scanMode === "manual"
+                  ? "bg-background text-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              disabled={loading}
+            >
+              <Keypad className="h-5 w-5" />
+              Enter code
+            </button>
+          </div>
+        )}
+
+        {cameraSupported === false && (
+          <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <CameraOff className="h-4 w-4" />
+            Camera scan not supported in this browser. Use manual entry below.
           </p>
-          {stats && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              <strong>{stats.todayCount}</strong> today · <strong>{stats.totalCount}</strong> total
-            </p>
-          )}
-        </header>
+        )}
 
-        <form onSubmit={handleCheckIn} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Station</CardTitle>
-              <CardDescription>Select the check-in station</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No stations yet.{" "}
-                  <Link
-                    href={`/events/${eventId}/stations/new`}
-                    className="underline"
-                  >
-                    Add a station
-                  </Link>{" "}
-                  first.
-                </p>
-              ) : (
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={stationId}
-                  onChange={(e) => setStationId(e.target.value)}
-                  disabled={loading}
-                >
-                  {stations.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.type}) — {s._count.checkIns} check-ins
-                    </option>
-                  ))}
-                </select>
+        {/* Camera view */}
+        {scanMode === "camera" && cameraSupported === true && (
+          <Card className="mb-4 overflow-hidden">
+            <CardContent className="relative aspect-4/3 bg-black p-0">
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className="h-full w-full object-cover"
+                style={{ transform: "scaleX(-1)" }}
+              />
+              {cameraError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4 text-center text-sm text-white">
+                  {cameraError}
+                </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Ticket code</CardTitle>
-              <CardDescription>
-                Paste the code from the ticket or scan the QR code
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="token">Code</Label>
-                <Input
-                  id="token"
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Paste or enter ticket code..."
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  disabled={loading}
-                  autoFocus
-                  autoComplete="off"
-                />
-              </div>
-              {message && (
-                <div
-                  className={`rounded-md p-3 text-sm ${
-                    message.type === "success"
-                      ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {message.text}
+              {cameraActive && !cameraError && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="h-56 w-56 rounded-lg border-4 border-white/50 bg-transparent" />
                 </div>
               )}
               <Button
-                type="submit"
-                className="w-full"
-                disabled={loading || stations.length === 0}
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="absolute bottom-2 right-2"
+                onClick={stopCamera}
               >
-                {loading ? "Checking in..." : "Check in"}
+                Stop camera
               </Button>
             </CardContent>
           </Card>
-        </form>
-      </div>
+        )}
+
+        {/* Manual entry form */}
+        {(scanMode === "manual" || !cameraSupported) && (
+          <form onSubmit={handleCheckIn}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Ticket code</CardTitle>
+                <CardDescription>
+                  Paste the code from the ticket or scan the QR code
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="token">Code</Label>
+                  <Input
+                    id="token"
+                    ref={inputRef}
+                    type="text"
+                    placeholder="Paste or enter ticket code..."
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    disabled={loading}
+                    autoFocus
+                    autoComplete="off"
+                    className="h-12 text-base"
+                  />
+                </div>
+                {message && (
+                  <div
+                    className={`rounded-md p-3 text-sm ${
+                      message.type === "success"
+                        ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                        : "bg-destructive/10 text-destructive"
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  className="h-12 w-full text-base"
+                  disabled={loading || stations.length === 0}
+                >
+                  {loading ? "Checking in..." : "Check in"}
+                </Button>
+              </CardContent>
+            </Card>
+          </form>
+        )}
+      </main>
     </div>
   );
 }

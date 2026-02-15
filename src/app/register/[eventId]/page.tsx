@@ -23,6 +23,16 @@ type TicketType = {
   sold: number;
 };
 
+type SessionOption = {
+  id: string;
+  name: string;
+  type: string;
+  startTime: string;
+  endTime: string;
+  track: string | null;
+  room: string | null;
+};
+
 type EventData = {
   id: string;
   name: string;
@@ -33,6 +43,7 @@ type EventData = {
   location: unknown;
   status: string;
   ticketTypes: TicketType[];
+  sessions?: SessionOption[];
 };
 
 export default function PublicRegisterPage() {
@@ -47,6 +58,7 @@ export default function PublicRegisterPage() {
     lastName: "",
     email: "",
     ticketTypeId: "",
+    sessionIds: [] as string[],
   });
   const [success, setSuccess] = useState<{ ticketUrl: string; name: string } | null>(null);
 
@@ -75,7 +87,7 @@ export default function PublicRegisterPage() {
           lastName: formData.lastName,
           email: formData.email,
           ticketTypeId: formData.ticketTypeId,
-          sessionIds: [],
+          sessionIds: formData.sessionIds ?? [],
           channel: "public",
         }),
       });
@@ -238,6 +250,56 @@ export default function PublicRegisterPage() {
                     ))}
                   </select>
                 </div>
+                {(event.sessions?.length ?? 0) > 0 && (
+                  <div className="space-y-2">
+                    <Label>Sessions (optional)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Select sessions you plan to attend
+                    </p>
+                    <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3">
+                      {event.sessions!.map((s) => {
+                        const start = new Date(s.startTime);
+                        const end = new Date(s.endTime);
+                        const timeStr = `${start.toLocaleTimeString(undefined, {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })} – ${end.toLocaleTimeString(undefined, {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}`;
+                        const checked = formData.sessionIds.includes(s.id);
+                        return (
+                          <label
+                            key={s.id}
+                            className="flex cursor-pointer items-start gap-3 rounded p-2 hover:bg-muted/50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                setFormData((p) => ({
+                                  ...p,
+                                  sessionIds: checked
+                                    ? p.sessionIds.filter((id) => id !== s.id)
+                                    : [...p.sessionIds, s.id],
+                                }))
+                              }
+                              disabled={loading}
+                              className="mt-1 rounded border-input"
+                            />
+                            <span className="text-sm">
+                              <span className="font-medium">{s.name}</span>
+                              <span className="ml-1 text-muted-foreground">
+                                {s.type} · {timeStr}
+                                {s.room ? ` · ${s.room}` : ""}
+                              </span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {error && (
                   <p className="text-sm text-destructive">{error}</p>
                 )}

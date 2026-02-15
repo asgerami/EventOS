@@ -16,6 +16,16 @@ import {
 
 type TicketType = { id: string; name: string; price: string; currency: string; quantity: number; sold: number };
 
+type SessionOption = {
+  id: string;
+  name: string;
+  type: string;
+  startTime: string;
+  endTime: string;
+  track: string | null;
+  room: string | null;
+};
+
 export default function NewRegistrationPage() {
   const router = useRouter();
   const params = useParams();
@@ -24,15 +34,17 @@ export default function NewRegistrationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     ticketTypeId: "",
+    sessionIds: [] as string[],
   });
 
   useEffect(() => {
-    fetch(`/api/events/${eventId}/ticket-types`)
+    fetch(`/api/events/${eventId}/ticket-types`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         if (data.ticketTypes?.length) {
@@ -43,6 +55,15 @@ export default function NewRegistrationPage() {
         }
       })
       .catch(() => setError("Failed to load ticket types"));
+  }, [eventId]);
+
+  useEffect(() => {
+    fetch(`/api/events/${eventId}/sessions`, { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.sessions?.length) setSessions(data.sessions);
+      })
+      .catch(() => {});
   }, [eventId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,9 +79,10 @@ export default function NewRegistrationPage() {
           lastName: formData.lastName,
           email: formData.email,
           ticketTypeId: formData.ticketTypeId,
-          sessionIds: [],
+          sessionIds: formData.sessionIds ?? [],
           channel: "walkin",
         }),
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create registration");
@@ -143,6 +165,56 @@ export default function NewRegistrationPage() {
                   ))}
                 </select>
               </div>
+              {sessions.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Sessions (optional)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Select sessions this attendee plans to attend
+                  </p>
+                  <div className="space-y-2 rounded-md border border-input bg-muted/30 p-3">
+                    {sessions.map((s) => {
+                      const start = new Date(s.startTime);
+                      const end = new Date(s.endTime);
+                      const timeStr = `${start.toLocaleTimeString(undefined, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })} – ${end.toLocaleTimeString(undefined, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}`;
+                      const checked = formData.sessionIds.includes(s.id);
+                      return (
+                        <label
+                          key={s.id}
+                          className="flex cursor-pointer items-start gap-3 rounded p-2 hover:bg-muted/50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setFormData((p) => ({
+                                ...p,
+                                sessionIds: checked
+                                  ? p.sessionIds.filter((id) => id !== s.id)
+                                  : [...p.sessionIds, s.id],
+                              }))
+                            }
+                            disabled={loading}
+                            className="mt-1 rounded border-input"
+                          />
+                          <span className="text-sm">
+                            <span className="font-medium">{s.name}</span>
+                            <span className="ml-1 text-muted-foreground">
+                              {s.type} · {timeStr}
+                              {s.room ? ` · ${s.room}` : ""}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {error && <p className="text-sm text-destructive">{error}</p>}
               <div className="flex gap-2 pt-2">
                 <Button type="submit" disabled={loading || ticketTypes.length === 0}>
