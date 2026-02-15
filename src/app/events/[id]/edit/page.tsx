@@ -39,6 +39,7 @@ export default function EditEventPage() {
     address: "",
     city: "",
     country: "",
+    badgeTemplate: "default" as "default" | "minimal" | "compact",
   });
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export default function EditEventPage() {
       .then((data) => {
         const e = data.event;
         const loc = (e.location || {}) as Location;
+        const branding = (e.brandingSettings || {}) as { badgeTemplate?: string };
         setFormData({
           name: e.name ?? "",
           slug: e.slug ?? "",
@@ -65,6 +67,7 @@ export default function EditEventPage() {
           address: loc.address ?? "",
           city: loc.city ?? "",
           country: loc.country ?? "",
+          badgeTemplate: (branding.badgeTemplate === "minimal" || branding.badgeTemplate === "compact" ? branding.badgeTemplate : "default") as "default" | "minimal" | "compact",
         });
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -101,6 +104,7 @@ export default function EditEventPage() {
           visibility: formData.visibility,
           status: formData.status,
           location,
+          brandingSettings: { badgeTemplate: formData.badgeTemplate },
         }),
       });
       const data = await res.json();
@@ -263,6 +267,34 @@ export default function EditEventPage() {
                   onChange={(e) => handleChange("timezone", e.target.value)}
                   disabled={loading}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Badge</CardTitle>
+              <CardDescription>Template used for printed/PDF badges (attendee ticket page)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="badgeTemplate">Badge template</Label>
+                <select
+                  id="badgeTemplate"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.badgeTemplate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      badgeTemplate: e.target.value as "default" | "minimal" | "compact",
+                    }))
+                  }
+                  disabled={loading}
+                >
+                  <option value="default">Default (event name, attendee name, ticket type, QR)</option>
+                  <option value="compact">Compact (event name, attendee name, QR)</option>
+                  <option value="minimal">Minimal (name + QR only, small card)</option>
+                </select>
               </div>
             </CardContent>
           </Card>

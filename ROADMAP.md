@@ -29,7 +29,7 @@
 - [x] Badge & QR generation
   - [x] QR code for ticket (encode token, display on /ticket/[token])
   - [x] Badge PDF generation
-  - [ ] Custom badge templates
+  - [x] Custom badge templates (default, minimal, compact)
 - [x] Scanning & check-in engine
   - [x] Check-in API (POST by token + stationId)
   - [x] Station management (CRUD API + list/add UI)
@@ -96,6 +96,4 @@
 - Tenant-scoped queries ✓
 
 **Next Up:**
-- Custom badge templates (optional)
-- Staff scanning interface (mobile/offline)
-- Super Admin dashboard
+- Phase 4: Real-time analytics, offline scanning, queue system

@@ -147,7 +147,10 @@ export const PUT = withTenantHandler(
             registrationSettings: validatedData.registrationSettings as any,
           }),
           ...(validatedData.brandingSettings !== undefined && {
-            brandingSettings: validatedData.brandingSettings as any,
+            brandingSettings: {
+              ...((existingEvent.brandingSettings as Record<string, unknown>) || {}),
+              ...(validatedData.brandingSettings as Record<string, unknown>),
+            } as any,
           }),
         },
         include: {
