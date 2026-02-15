@@ -121,7 +121,7 @@ export const POST = withTenantHandler(
         return NextResponse.json(
           {
             error: "Validation failed",
-            details: error.errors,
+            details: error.issues,
           },
           { status: 400 }
         );

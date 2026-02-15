@@ -77,6 +77,17 @@ export default async function TicketPage({ params }: PageProps) {
             <p className="text-center text-xs text-muted-foreground">
               Show this QR code at check-in
             </p>
+
+            <div className="pt-2">
+              <a
+                href={`/api/ticket/${encodeURIComponent(token)}/badge`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full rounded-md border bg-muted/50 py-2 text-center text-sm font-medium text-foreground hover:bg-muted"
+              >
+                Download badge (PDF)
+              </a>
+            </div>
           </CardContent>
         </Card>
 

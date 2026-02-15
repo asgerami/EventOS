@@ -25,10 +25,10 @@
   - [x] Registration API endpoints (create, list, get, update)
   - [x] Ticket type management (CRUD API + create UI)
   - [x] Registration form UI (list + add registration)
-  - [ ] Email confirmation system
+  - [x] Email confirmation system
 - [x] Badge & QR generation
   - [x] QR code for ticket (encode token, display on /ticket/[token])
-  - [ ] Badge PDF generation
+  - [x] Badge PDF generation
   - [ ] Custom badge templates
 - [x] Scanning & check-in engine
   - [x] Check-in API (POST by token + stationId)
@@ -96,6 +96,6 @@
 - Tenant-scoped queries ✓
 
 **Next Up:**
-- Badge PDF generation
-- Email confirmation for registrations
+- Custom badge templates (optional)
 - Staff scanning interface (mobile/offline)
+- Super Admin dashboard

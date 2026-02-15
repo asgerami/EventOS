@@ -28,7 +28,7 @@ export async function GET() {
         email: session.user.email,
         name: session.user.name,
       } : null,
-      activeMember: activeMember?.data || null,
+      activeMember: activeMember ?? null,
     });
   } catch (error) {
     console.error("[Debug Session] Error:", error);

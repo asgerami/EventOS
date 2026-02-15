@@ -13,7 +13,7 @@ export default async function OrganizationDebugPage() {
     activeMemberError = error;
   }
 
-  let organizations = [];
+  let organizations: Awaited<ReturnType<typeof prisma.organization.findMany>> = [];
   let orgsError = null;
   try {
     organizations = await prisma.organization.findMany({

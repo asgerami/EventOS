@@ -81,7 +81,7 @@ export default async function EventRegistrationsPage({ params, searchParams }: P
                 Export CSV
               </a>
             </Button>
-            <Button asChild variant={!status ? "secondary" : "outline"} size="sm" asChild>
+            <Button asChild variant={!status ? "secondary" : "outline"} size="sm">
               <Link href={`/events/${eventId}/registrations`}>All</Link>
             </Button>
             {(["PENDING", "CONFIRMED", "CANCELLED"] as const).map((s) => (

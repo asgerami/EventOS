@@ -15,7 +15,7 @@ export const createRegistrationSchema = z.object({
   ticketTypeId: z.string().uuid("Invalid ticket type"),
   sessionIds: z.array(z.string().uuid()).default([]),
   channel: z.enum(["public", "invite", "csv", "walkin", "api"]).default("public"),
-  customFieldValues: z.record(z.any()).optional().nullable(),
+  customFieldValues: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export const updateRegistrationSchema = z.object({
@@ -24,7 +24,7 @@ export const updateRegistrationSchema = z.object({
   lastName: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),
   sessionIds: z.array(z.string().uuid()).optional(),
-  customFieldValues: z.record(z.any()).optional().nullable(),
+  customFieldValues: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export type CreateRegistrationInput = z.infer<typeof createRegistrationSchema>;

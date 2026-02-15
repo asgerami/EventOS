@@ -38,8 +38,8 @@ export const createEventSchema = z.object({
   capacity: z.number().int().min(0).default(0),
   visibility: z.enum(["public", "private", "unlisted"]).default("public"),
   status: eventStatusEnum.default("DRAFT"),
-  registrationSettings: z.record(z.any()).optional().nullable(),
-  brandingSettings: z.record(z.any()).optional().nullable(),
+  registrationSettings: z.record(z.string(), z.any()).optional().nullable(),
+  brandingSettings: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export const updateEventSchema = createEventSchema.partial();

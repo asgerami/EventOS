@@ -60,7 +60,7 @@ export const POST = withTenantHandler(
     } catch (error) {
       if (error instanceof ZodError) {
         return NextResponse.json(
-          { error: "Validation failed", details: error.errors },
+          { error: "Validation failed", details: error.issues },
           { status: 400 }
         );
       }

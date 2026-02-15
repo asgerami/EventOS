@@ -7,7 +7,7 @@ export const createTicketTypeSchema = z.object({
   quantity: z.number().int().min(1, "Quantity must be at least 1"),
   sessionAccess: z.enum(["all", "specific"]).default("all"),
   allowedSessionIds: z.array(z.string().uuid()).optional().default([]),
-  perks: z.record(z.any()).optional().nullable(),
+  perks: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export const updateTicketTypeSchema = createTicketTypeSchema.partial();
