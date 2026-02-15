@@ -114,7 +114,10 @@ export default function CheckInPage() {
         await video.play();
         setCameraActive(true);
 
-        const BarcodeDetector = (window as unknown as { BarcodeDetector: new () => BarcodeDetector })
+        type BarcodeDetectorCtor = new (options?: { formats: string[] }) => {
+          detect(element: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
+        };
+        const BarcodeDetector = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor })
           .BarcodeDetector;
         const detector = new BarcodeDetector({ formats: ["qr_code"] });
 

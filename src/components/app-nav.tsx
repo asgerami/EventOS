@@ -7,16 +7,19 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { LayoutDashboard, Calendar, Building2, LogOut, Menu, X } from "lucide-react";
 
+type SessionState = Awaited<ReturnType<typeof authClient.getSession>>;
+
 export function AppNav() {
   const pathname = usePathname();
-  const [session, setSession] = useState<{ user?: { name?: string; email?: string } } | null>(null);
+  const [session, setSession] = useState<SessionState>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     authClient.getSession().then(setSession);
   }, []);
 
-  if (!session?.user) return null;
+  const user = session && "data" in session ? session.data?.user : (session as { user?: { name?: string; email?: string } } | null)?.user;
+  if (!user) return null;
 
   const isActive = (path: string) =>
     pathname === path || pathname?.startsWith(path + "/");
@@ -63,7 +66,7 @@ export function AppNav() {
         {/* Right side */}
         <div className="flex items-center gap-2">
           <span className="hidden max-w-[140px] truncate text-xs text-muted-foreground lg:block">
-            {session.user.name ?? session.user.email}
+            {user.name ?? user.email}
           </span>
           <a
             href="/api/auth/sign-out"
