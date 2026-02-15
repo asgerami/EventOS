@@ -8,20 +8,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+const USERS_PAGE_SIZE = 50;
 
 export default async function SuperAdminPage() {
-  const orgs = await prisma.organization.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: { events: true, members: true },
+  const [orgs, totalEvents, totalMembers, users] = await Promise.all([
+    prisma.organization.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: { events: true, members: true },
+        },
       },
-    },
-  });
-
-  const [totalEvents, totalMembers] = await Promise.all([
+    }),
     prisma.event.count({ where: { deletedAt: null } }),
     prisma.user.count(),
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      take: USERS_PAGE_SIZE,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        banned: true,
+        createdAt: true,
+        members: {
+          select: {
+            role: true,
+            organization: { select: { id: true, name: true, slug: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   return (
@@ -102,6 +122,73 @@ export default async function SuperAdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Users</CardTitle>
+            <CardDescription>
+              All users across tenants. Showing latest {USERS_PAGE_SIZE}
+              {totalMembers > USERS_PAGE_SIZE
+                ? ` of ${totalMembers}`
+                : ""}
+              .
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {users.length === 0 ? (
+              <p className="py-8 text-center text-muted-foreground">
+                No users yet.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 pr-4 font-medium">Name</th>
+                      <th className="pb-2 pr-4 font-medium">Email</th>
+                      <th className="pb-2 pr-4 font-medium">Role</th>
+                      <th className="pb-2 pr-4 font-medium">Status</th>
+                      <th className="pb-2 pr-4 font-medium">Organizations</th>
+                      <th className="pb-2 font-medium">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-b last:border-0">
+                        <td className="py-3 pr-4 font-medium">{u.name}</td>
+                        <td className="py-3 pr-4 text-muted-foreground">{u.email}</td>
+                        <td className="py-3 pr-4">
+                          <Badge variant="outline">{u.role}</Badge>
+                        </td>
+                        <td className="py-3 pr-4">
+                          {u.banned ? (
+                            <Badge variant="destructive">Banned</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">Active</span>
+                          )}
+                        </td>
+                        <td className="py-3 pr-4">
+                          {u.members.length === 0 ? (
+                            <span className="text-muted-foreground">—</span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {u.members
+                                .map((m) => `${m.organization.name} (${m.role})`)
+                                .join(", ")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 text-muted-foreground">
+                          {new Date(u.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>

@@ -40,7 +40,7 @@
 - [x] Super Admin dashboard
   - [x] Tenant management (list orgs, event/member counts)
   - [x] System-wide analytics (totals)
-  - [ ] User management (list users across tenants)
+  - [x] User management (list users across tenants)
 - [x] Host dashboard (basic)
   - [x] Organization switcher
   - [x] Event management interface
