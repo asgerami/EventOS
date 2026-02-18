@@ -10,9 +10,9 @@ type InviteMemberInput = Parameters<typeof authClient.organization.inviteMember>
 type MemberInviteRole = "staff" | "cohost" | "owner";
 
 const ROLES = [
-  { value: "staff", label: "Staff (scanner only)" },
-  { value: "cohost", label: "Cohost (manage events + scan)" },
-  { value: "owner", label: "Owner (full access)" },
+  { value: "staff", label: "Scanner" },
+  { value: "cohost", label: "Cohost" },
+  { value: "owner", label: "Owner" },
 ] as const;
 
 export function InviteMemberForm({ organizationId }: { organizationId: string }) {
@@ -51,8 +51,8 @@ export function InviteMemberForm({ organizationId }: { organizationId: string })
       setMessage({
         type: "success",
         text: data?.id
-          ? "Invitation created. Share the link below with them (they must be signed in or sign up first)."
-          : "Invitation sent. If you have invitation emails configured, they will receive an email.",
+          ? "Invite created. Share the link below."
+          : "Invitation sent.",
       });
       setEmail("");
       setLoading(false);
@@ -77,7 +77,7 @@ export function InviteMemberForm({ organizationId }: { organizationId: string })
       )}
       {inviteLink && (
         <div className="rounded-lg border bg-muted/50 p-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Invitation link (copy and send to them)</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Invitation link</p>
           <code className="block break-all text-xs">{inviteLink}</code>
         </div>
       )}
@@ -87,7 +87,7 @@ export function InviteMemberForm({ organizationId }: { organizationId: string })
           <Input
             id="invite-email"
             type="email"
-            placeholder="scanner@example.com"
+            placeholder="name@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
@@ -113,7 +113,7 @@ export function InviteMemberForm({ organizationId }: { organizationId: string })
         </div>
       </div>
       <Button type="submit" disabled={loading} className="btn-gradient rounded-lg">
-        {loading ? "Sending…" : "Create invitation"}
+        {loading ? "Sending..." : "Send invite"}
       </Button>
     </form>
   );

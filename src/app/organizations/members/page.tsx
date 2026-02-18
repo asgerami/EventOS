@@ -41,48 +41,41 @@ export default async function OrganizationMembersPage() {
   const roleLabel: Record<string, string> = {
     owner: "Owner",
     cohost: "Cohost",
-    staff: "Staff (scanner)",
+    staff: "Scanner",
   };
 
   return (
     <div className="flex min-h-screen flex-col">
       <AppNav />
       <div className="flex-1 p-4 sm:p-6">
-        <div className="mx-auto max-w-2xl">
-          <Button asChild variant="ghost" size="sm" className="mb-4 rounded-lg">
+        <div className="mx-auto max-w-3xl">
+          <Button asChild variant="ghost" size="sm" className="mb-3 rounded-lg">
             <Link href="/dashboard">← Dashboard</Link>
           </Button>
 
-          <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight">Team</h1>
+                <p className="text-sm text-muted-foreground">{organization.name}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Team & scanners</h1>
-              <p className="text-sm text-muted-foreground">{organization.name}</p>
+            <div className="rounded-md border bg-muted/40 px-3 py-1.5 text-sm">
+              <span className="font-medium">{members.length}</span>{" "}
+              <span className="text-muted-foreground">members</span>
             </div>
           </div>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Who can do what</CardTitle>
-              <CardDescription>
-                <strong>Owner / Cohost</strong> can manage events, stations, and invite people.{" "}
-                <strong>Staff (scanner)</strong> can only open the check-in page and scan tickets at events. Scanners use the same login; you invite them here and they choose this workspace to access events.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
           {canInvite && (
             <Card className="mb-6">
-              <CardHeader>
+              <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <UserPlus className="h-5 w-5" />
-                  Invite member
+                  Invite
                 </CardTitle>
-                <CardDescription>
-                  Add a scanner (staff) or a cohost. They’ll sign in with their email; send them the invite link after creating the invitation.
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <InviteMemberForm organizationId={organization.id} />
@@ -91,26 +84,25 @@ export default async function OrganizationMembersPage() {
           )}
 
           <Card>
-            <CardHeader>
-              <CardTitle>Members ({members.length})</CardTitle>
-              <CardDescription>Everyone in this workspace</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle>Members</CardTitle>
             </CardHeader>
             <CardContent>
               {members.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No members yet.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">No members yet</p>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-2">
                   {members.map((m) => (
                     <li
                       key={m.id}
-                      className="flex items-center justify-between gap-4 rounded-lg border p-3"
+                      className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium">{m.user.name}</p>
+                          <p className="truncate font-medium">{m.user.name}</p>
                           <p className="truncate text-sm text-muted-foreground">{m.user.email}</p>
                         </div>
                       </div>
