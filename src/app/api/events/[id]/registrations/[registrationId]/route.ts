@@ -23,6 +23,18 @@ export const GET = withTenantHandler(
       where: { id: registrationId, eventId },
       include: {
         ticketType: { select: { id: true, name: true, price: true, currency: true } },
+        checkIns: {
+          orderBy: { scannedAt: "desc" },
+          include: {
+            station: { select: { id: true, name: true, type: true } },
+            session: { select: { id: true, name: true, startTime: true, endTime: true, room: true } },
+            scanner: { select: { id: true, name: true } },
+          },
+        },
+        badges: {
+          orderBy: { printedAt: "desc" },
+          select: { id: true, printedAt: true, template: true },
+        },
       },
     });
     if (!registration) {

@@ -24,7 +24,12 @@ export async function POST(
         deletedAt: null,
         status: { in: ["PUBLISHED", "ONGOING"] },
       },
-      include: { ticketTypes: true },
+      select: {
+        id: true,
+        name: true,
+        registrationSettings: true,
+        ticketTypes: true,
+      },
     });
 
     if (!event) {
@@ -59,6 +64,9 @@ export async function POST(
     }
 
     const confirmationToken = randomBytes(32).toString("hex");
+    const regSettings = (event.registrationSettings || {}) as Record<string, unknown>;
+    const approvalRequired = regSettings.approvalRequired === true;
+    const initialStatus = approvalRequired ? "PENDING" : "CONFIRMED";
 
     const registration = await prisma.registration.create({
       data: {
@@ -71,7 +79,8 @@ export async function POST(
         channel: "public",
         customFieldValues: data.customFieldValues as any,
         confirmationToken,
-        status: "PENDING",
+        status: initialStatus,
+        ...(initialStatus === "CONFIRMED" && { confirmedAt: new Date() }),
       },
       include: {
         ticketType: { select: { name: true } },

@@ -44,6 +44,15 @@ async function main() {
       description: "The premier developer conference bringing together engineers, designers, and product leaders to share insights, showcase breakthroughs, and shape the future of technology.",
       location: { venue: "Moscone Center", address: "747 Howard St", city: "San Francisco", country: "USA" },
       brandingSettings: { primaryColor: "#7c3aed", accentColor: "#4f46e5", badgeTemplate: "default" },
+      registrationSettings: {
+        approvalRequired: false,
+        customFields: [
+          { id: "cf-phone", label: "Phone number", type: "tel", required: false, placeholder: "+1 (555) 000-0000" },
+          { id: "cf-company", label: "Company", type: "text", required: false, placeholder: "Your company name" },
+          { id: "cf-role", label: "Job title", type: "text", required: false, placeholder: "e.g. Software Engineer" },
+          { id: "cf-dietary", label: "Dietary requirements", type: "select", required: false, options: ["None", "Vegetarian", "Vegan", "Gluten-free", "Halal", "Kosher", "Other"] },
+        ],
+      },
     },
     create: {
       id: "seed-event-1",
@@ -62,6 +71,15 @@ async function main() {
         primaryColor: "#7c3aed",
         accentColor: "#4f46e5",
         badgeTemplate: "default",
+      },
+      registrationSettings: {
+        approvalRequired: false,
+        customFields: [
+          { id: "cf-phone", label: "Phone number", type: "tel", required: false, placeholder: "+1 (555) 000-0000" },
+          { id: "cf-company", label: "Company", type: "text", required: false, placeholder: "Your company name" },
+          { id: "cf-role", label: "Job title", type: "text", required: false, placeholder: "e.g. Software Engineer" },
+          { id: "cf-dietary", label: "Dietary requirements", type: "select", required: false, options: ["None", "Vegetarian", "Vegan", "Gluten-free", "Halal", "Kosher", "Other"] },
+        ],
       },
     },
   });
@@ -360,18 +378,18 @@ Community: Local Developer Guild, WomenWhoCode SF, DevOpsDays`,
   });
 
   // Registrations for event1 (with confirmation tokens for QR testing)
-  const regs: { id: string; eventId: string; ticketTypeId: string; firstName: string; lastName: string; email: string; confirmationToken: string; status: "CONFIRMED" | "PENDING" }[] = [
-    { id: "seed-reg-1", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Alex", lastName: "Smith", email: "alex@example.com", confirmationToken: token(), status: "CONFIRMED" },
-    { id: "seed-reg-2", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Jordan", lastName: "Lee", email: "jordan@example.com", confirmationToken: token(), status: "CONFIRMED" },
-    { id: "seed-reg-3", eventId: event1.id, ticketTypeId: tt2.id, firstName: "Sam", lastName: "Taylor", email: "sam@example.com", confirmationToken: token(), status: "CONFIRMED" },
-    { id: "seed-reg-4", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Riley", lastName: "Brown", email: "riley@example.com", confirmationToken: token(), status: "PENDING" },
-    { id: "seed-reg-5", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Casey", lastName: "Davis", email: "casey@example.com", confirmationToken: token(), status: "CONFIRMED" },
+  const regs: { id: string; eventId: string; ticketTypeId: string; firstName: string; lastName: string; email: string; confirmationToken: string; status: "CONFIRMED" | "PENDING"; customFieldValues?: Record<string, string> }[] = [
+    { id: "seed-reg-1", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Alex", lastName: "Smith", email: "alex@example.com", confirmationToken: token(), status: "CONFIRMED", customFieldValues: { "cf-phone": "+1 (415) 555-0101", "cf-company": "TechCorp", "cf-role": "Senior Engineer", "cf-dietary": "None" } },
+    { id: "seed-reg-2", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Jordan", lastName: "Lee", email: "jordan@example.com", confirmationToken: token(), status: "CONFIRMED", customFieldValues: { "cf-phone": "+1 (650) 555-0202", "cf-company": "StartupXYZ", "cf-role": "Product Manager", "cf-dietary": "Vegetarian" } },
+    { id: "seed-reg-3", eventId: event1.id, ticketTypeId: tt2.id, firstName: "Sam", lastName: "Taylor", email: "sam@example.com", confirmationToken: token(), status: "CONFIRMED", customFieldValues: { "cf-company": "CloudBase", "cf-role": "CTO", "cf-dietary": "Vegan" } },
+    { id: "seed-reg-4", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Riley", lastName: "Brown", email: "riley@example.com", confirmationToken: token(), status: "PENDING", customFieldValues: { "cf-company": "Freelance", "cf-role": "Full-stack Developer" } },
+    { id: "seed-reg-5", eventId: event1.id, ticketTypeId: tt1.id, firstName: "Casey", lastName: "Davis", email: "casey@example.com", confirmationToken: token(), status: "CONFIRMED", customFieldValues: { "cf-phone": "+1 (510) 555-0505", "cf-company": "DevTools Inc.", "cf-role": "Designer", "cf-dietary": "Gluten-free" } },
   ];
 
   for (const r of regs) {
     await prisma.registration.upsert({
       where: { id: r.id },
-      update: {},
+      update: { customFieldValues: r.customFieldValues as any },
       create: {
         id: r.id,
         eventId: r.eventId,
@@ -383,6 +401,7 @@ Community: Local Developer Guild, WomenWhoCode SF, DevOpsDays`,
         status: r.status,
         sessionIds: [],
         channel: "public",
+        customFieldValues: r.customFieldValues as any,
       },
     });
   }
@@ -426,6 +445,46 @@ Community: Local Developer Guild, WomenWhoCode SF, DevOpsDays`,
         scannedBy: user.id,
         type: "CHECKIN",
         method: "qr_scan",
+      },
+    });
+    // Session check-ins (attendee activity)
+    await prisma.checkIn.upsert({
+      where: { id: "seed-checkin-s1" },
+      update: {},
+      create: {
+        id: "seed-checkin-s1",
+        registrationId: reg1.id,
+        sessionId: session1.id,
+        stationId: station2.id,
+        scannedBy: user.id,
+        type: "CHECKIN",
+        method: "qr_scan",
+      },
+    });
+    await prisma.checkIn.upsert({
+      where: { id: "seed-checkin-s2" },
+      update: {},
+      create: {
+        id: "seed-checkin-s2",
+        registrationId: reg1.id,
+        sessionId: session2.id,
+        stationId: station2.id,
+        scannedBy: user.id,
+        type: "CHECKIN",
+        method: "qr_scan",
+      },
+    });
+    await prisma.checkIn.upsert({
+      where: { id: "seed-checkin-s3" },
+      update: {},
+      create: {
+        id: "seed-checkin-s3",
+        registrationId: reg2.id,
+        sessionId: session1.id,
+        stationId: station2.id,
+        scannedBy: user.id,
+        type: "CHECKIN",
+        method: "manual",
       },
     });
   }

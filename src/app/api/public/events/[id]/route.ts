@@ -29,6 +29,7 @@ export async function GET(
       capacity: true,
       coverImage: true,
       brandingSettings: true,
+      registrationSettings: true,
       organization: { select: { name: true, logo: true } },
       sections: {
         where: { isVisible: true },
@@ -75,12 +76,17 @@ export async function GET(
     return NextResponse.json({ error: "Event not found or not available" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    event: {
-      ...event,
-      ticketTypes: event.ticketTypes.filter((t) => t.sold < t.quantity),
-      sessions: event.sessions ?? [],
-      sections: event.sections ?? [],
+  return NextResponse.json(
+    {
+      event: {
+        ...event,
+        ticketTypes: event.ticketTypes.filter((t) => t.sold < t.quantity),
+        sessions: event.sessions ?? [],
+        sections: event.sections ?? [],
+      },
     },
-  });
+    {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    }
+  );
 }

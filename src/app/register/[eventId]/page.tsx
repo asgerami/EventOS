@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarDays,
   CheckCircle2,
@@ -64,6 +65,20 @@ type BrandingSettings = {
   badgeTemplate?: string;
 };
 
+type CustomField = {
+  id: string;
+  label: string;
+  type: "text" | "email" | "tel" | "url" | "number" | "textarea" | "select";
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+};
+
+type RegistrationSettings = {
+  approvalRequired?: boolean;
+  customFields?: CustomField[];
+};
+
 type EventData = {
   id: string;
   name: string;
@@ -76,6 +91,7 @@ type EventData = {
   capacity: number;
   coverImage: string | null;
   brandingSettings: BrandingSettings | null;
+  registrationSettings: RegistrationSettings | null;
   organization: { name: string; logo: string | null };
   ticketTypes: TicketType[];
   sessions: SessionOption[];
@@ -131,10 +147,11 @@ export default function PublicRegisterPage() {
     email: "",
     ticketTypeId: "",
   });
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState<{ ticketUrl: string; name: string } | null>(null);
 
   useEffect(() => {
-    fetch(`/api/public/events/${eventId}`)
+    fetch(`/api/public/events/${eventId}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
@@ -161,6 +178,7 @@ export default function PublicRegisterPage() {
           ticketTypeId: formData.ticketTypeId,
           sessionIds: [],
           channel: "public",
+          customFieldValues: Object.keys(customValues).length > 0 ? customValues : undefined,
         }),
       });
       const data = await res.json();
@@ -467,6 +485,52 @@ export default function PublicRegisterPage() {
                         className="h-11 rounded-lg"
                       />
                     </div>
+
+                    {/* Custom fields */}
+                    {(event.registrationSettings?.customFields || []).map((field) => (
+                      <div key={field.id} className="space-y-1.5">
+                        <Label htmlFor={`cf-${field.id}`} className="text-sm font-medium">
+                          {field.label}{field.required && " *"}
+                        </Label>
+                        {field.type === "textarea" ? (
+                          <Textarea
+                            id={`cf-${field.id}`}
+                            placeholder={field.placeholder || ""}
+                            value={customValues[field.id] || ""}
+                            onChange={(e) => setCustomValues((p) => ({ ...p, [field.id]: e.target.value }))}
+                            required={field.required}
+                            disabled={loading}
+                            rows={3}
+                            className="rounded-lg"
+                          />
+                        ) : field.type === "select" ? (
+                          <select
+                            id={`cf-${field.id}`}
+                            className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                            value={customValues[field.id] || ""}
+                            onChange={(e) => setCustomValues((p) => ({ ...p, [field.id]: e.target.value }))}
+                            required={field.required}
+                            disabled={loading}
+                          >
+                            <option value="">{field.placeholder || "Select..."}</option>
+                            {(field.options || []).filter(Boolean).map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            id={`cf-${field.id}`}
+                            type={field.type}
+                            placeholder={field.placeholder || ""}
+                            value={customValues[field.id] || ""}
+                            onChange={(e) => setCustomValues((p) => ({ ...p, [field.id]: e.target.value }))}
+                            required={field.required}
+                            disabled={loading}
+                            className="h-11 rounded-lg"
+                          />
+                        )}
+                      </div>
+                    ))}
 
                     {error && (
                       <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>

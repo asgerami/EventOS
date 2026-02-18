@@ -24,6 +24,7 @@ import {
   Plus,
   Trash2,
   X,
+  GripVertical,
 } from "lucide-react";
 
 type Location = { venue?: string; address?: string; city?: string; country?: string };
@@ -37,6 +38,15 @@ type Section = {
   isVisible: boolean;
   _dirty?: boolean;
   _new?: boolean;
+};
+
+type CustomField = {
+  id: string;
+  label: string;
+  type: "text" | "email" | "tel" | "url" | "number" | "textarea" | "select";
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
 };
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -73,6 +83,8 @@ export default function EditEventPage() {
 
   const [sections, setSections] = useState<Section[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
+  const [approvalRequired, setApprovalRequired] = useState(false);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
   // Load event data
   useEffect(() => {
@@ -86,6 +98,7 @@ export default function EditEventPage() {
         const e = data.event;
         const loc = (e.location || {}) as Location;
         const branding = (e.brandingSettings || {}) as Record<string, string>;
+        const regSettings = (e.registrationSettings || {}) as Record<string, unknown>;
         setFormData({
           name: e.name ?? "",
           slug: e.slug ?? "",
@@ -105,6 +118,10 @@ export default function EditEventPage() {
           primaryColor: branding.primaryColor || "#7c3aed",
           accentColor: branding.accentColor || "#6366f1",
         });
+        setApprovalRequired(regSettings.approvalRequired === true);
+        if (Array.isArray(regSettings.customFields)) {
+          setCustomFields(regSettings.customFields as CustomField[]);
+        }
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
       .finally(() => setFetching(false));
@@ -281,6 +298,10 @@ export default function EditEventPage() {
             badgeTemplate: formData.badgeTemplate,
             primaryColor: formData.primaryColor,
             accentColor: formData.accentColor,
+          },
+          registrationSettings: {
+            approvalRequired,
+            customFields: customFields.filter((f) => f.label.trim()),
           },
         }),
       });
@@ -548,6 +569,138 @@ export default function EditEventPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input placeholder="City" value={formData.city} onChange={(e) => handleChange("city", e.target.value)} disabled={loading} />
                 <Input placeholder="Country" value={formData.country} onChange={(e) => handleChange("country", e.target.value)} disabled={loading} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Registration settings ── */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Registration settings</CardTitle>
+              <CardDescription>Control approval flow and add custom fields to the registration form</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={approvalRequired}
+                  onChange={(e) => setApprovalRequired(e.target.checked)}
+                  className="h-4 w-4 rounded border-input"
+                  disabled={loading}
+                />
+                <div>
+                  <p className="text-sm font-medium">Require approval</p>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, new registrations start as &ldquo;Pending&rdquo; and must be approved manually. Otherwise they are auto-confirmed.
+                  </p>
+                </div>
+              </label>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Custom fields</p>
+                    <p className="text-xs text-muted-foreground">Add extra fields like phone, company, dietary preferences, etc.</p>
+                  </div>
+                </div>
+
+                {customFields.map((field, idx) => (
+                  <div key={field.id} className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <GripVertical className="mt-2.5 h-4 w-4 shrink-0 text-muted-foreground/40" />
+                      <div className="flex-1 grid gap-3 sm:grid-cols-3">
+                        <Input
+                          placeholder="Field label"
+                          value={field.label}
+                          onChange={(e) => {
+                            const updated = [...customFields];
+                            updated[idx] = { ...updated[idx], label: e.target.value };
+                            setCustomFields(updated);
+                          }}
+                        />
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={field.type}
+                          onChange={(e) => {
+                            const updated = [...customFields];
+                            updated[idx] = { ...updated[idx], type: e.target.value as CustomField["type"] };
+                            setCustomFields(updated);
+                          }}
+                        >
+                          <option value="text">Text</option>
+                          <option value="email">Email</option>
+                          <option value="tel">Phone</option>
+                          <option value="url">URL</option>
+                          <option value="number">Number</option>
+                          <option value="textarea">Text area</option>
+                          <option value="select">Dropdown</option>
+                        </select>
+                        <Input
+                          placeholder="Placeholder text"
+                          value={field.placeholder || ""}
+                          onChange={(e) => {
+                            const updated = [...customFields];
+                            updated[idx] = { ...updated[idx], placeholder: e.target.value };
+                            setCustomFields(updated);
+                          }}
+                        />
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <label className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(e) => {
+                              const updated = [...customFields];
+                              updated[idx] = { ...updated[idx], required: e.target.checked };
+                              setCustomFields(updated);
+                            }}
+                            className="h-3 w-3 rounded border-input"
+                          />
+                          Required
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setCustomFields((prev) => prev.filter((_, i) => i !== idx))}
+                          className="rounded p-1 text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {field.type === "select" && (
+                      <div className="ml-6 space-y-1">
+                        <Label className="text-xs">Options (one per line)</Label>
+                        <Textarea
+                          placeholder={"Option 1\nOption 2\nOption 3"}
+                          rows={3}
+                          value={(field.options || []).join("\n")}
+                          onChange={(e) => {
+                            const updated = [...customFields];
+                            updated[idx] = { ...updated[idx], options: e.target.value.split("\n") };
+                            setCustomFields(updated);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCustomFields((prev) => [
+                      ...prev,
+                      { id: `cf-${Date.now()}`, label: "", type: "text", required: false },
+                    ])
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  Add field
+                </Button>
               </div>
             </CardContent>
           </Card>

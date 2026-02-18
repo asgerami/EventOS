@@ -34,6 +34,7 @@ export const GET = withTenantHandler(
         skip: offset,
         include: {
           ticketType: { select: { id: true, name: true, price: true, currency: true } },
+          _count: { select: { checkIns: true } },
         },
       }),
       prisma.registration.count({ where }),
