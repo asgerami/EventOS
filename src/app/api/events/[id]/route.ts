@@ -126,6 +126,9 @@ export const PUT = withTenantHandler(
           ...(validatedData.description !== undefined && {
             description: validatedData.description,
           }),
+          ...(validatedData.coverImage !== undefined && {
+            coverImage: validatedData.coverImage,
+          }),
           ...(validatedData.location !== undefined && {
             location: validatedData.location as any,
           }),

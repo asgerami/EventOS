@@ -24,6 +24,7 @@ import {
   Clock,
   Edit,
   ExternalLink,
+  Globe,
   MapPin,
   QrCode,
   Radio,
@@ -78,59 +79,59 @@ export default async function EventPage({ params }: EventPageProps) {
 
   return (
     <div className="flex-1 min-h-0">
-      {/* ── Hero header ── */}
+      {/* ── Hero header (mobile-optimized) ── */}
       <div className={`relative overflow-hidden border-b bg-linear-to-br ${status.heroBg}`}>
         <div className="absolute inset-0 bg-dot-pattern opacity-50" />
-        <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          {/* Breadcrumb */}
-          <nav className="mb-4 flex items-center gap-2 text-sm">
+        <div className="relative mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
+          <nav className="mb-3 flex items-center gap-2 text-sm sm:mb-4">
             <Link
               href="/events"
               className="text-muted-foreground transition-colors hover:text-foreground"
             >
               Events
             </Link>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
             <span className="truncate font-medium text-foreground">{event.name}</span>
           </nav>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {event.name}
                 </h1>
-                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${status.class}`}>
+                <span className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider sm:px-3 sm:py-1 sm:text-xs ${status.class}`}>
                   {status.label}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-4">
                 <span className="inline-flex items-center gap-1.5">
-                  <CalendarDays className="h-4 w-4 text-primary/80" />
+                  <CalendarDays className="h-4 w-4 shrink-0 text-primary/80" />
                   {new Date(event.startDate).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    month: "long",
+                    weekday: "short",
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
                 </span>
                 {locationDisplay && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary/80" />
-                    {locationDisplay}
+                  <span className="inline-flex items-center gap-1.5 truncate">
+                    <MapPin className="h-4 w-4 shrink-0 text-primary/80" />
+                    <span className="truncate">{locationDisplay}</span>
                   </span>
                 )}
               </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <Button asChild variant="outline" size="sm" className="rounded-lg border-border/80 bg-background/80 backdrop-blur">
-                <Link href={`/events/${event.id}/edit`}>
+            {/* Full-width stacked buttons on mobile, row on desktop */}
+            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:gap-2">
+              <Button asChild variant="outline" size="sm" className="h-11 rounded-xl border-border/80 bg-background/80 backdrop-blur sm:h-9 sm:rounded-lg">
+                <Link href={`/events/${event.id}/edit`} className="flex items-center justify-center">
                   <Edit className="mr-1.5 h-3.5 w-3.5" />
                   Edit event
                 </Link>
               </Button>
-              <Button asChild size="sm" className="btn-gradient rounded-lg">
-                <Link href={`/events/${event.id}/check-in`}>
+              <Button asChild size="sm" className="h-11 rounded-xl sm:h-9 sm:rounded-lg btn-gradient">
+                <Link href={`/events/${event.id}/check-in`} className="flex items-center justify-center">
                   <QrCode className="mr-1.5 h-3.5 w-3.5" />
                   Check-in
                 </Link>
@@ -140,117 +141,152 @@ export default async function EventPage({ params }: EventPageProps) {
         </div>
       </div>
 
-      {/* ── KPI strip ── */}
+      {/* ── KPI strip: horizontal scroll on mobile, grid on desktop ── */}
       <div className="border-b bg-muted/30">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px bg-border/50 sm:grid-cols-4">
-          {[
-            {
-              label: "Registrations",
-              value: event._count.registrations,
-              icon: Users,
-              href: `/events/${event.id}/registrations`,
-              color: "text-violet-600 dark:text-violet-400",
-            },
-            {
-              label: "Sessions",
-              value: event.sessions.length,
-              icon: Radio,
-              href: null,
-              color: "text-blue-600 dark:text-blue-400",
-            },
-            {
-              label: "Stations",
-              value: event._count.stations,
-              icon: QrCode,
-              href: `/events/${event.id}/stations`,
-              color: "text-emerald-600 dark:text-emerald-400",
-            },
-            {
-              label: "Revenue",
-              value: `${currency === "USD" ? "$" : ""}${totalRevenue.toFixed(0)}${currency !== "USD" ? ` ${currency}` : ""}`,
-              icon: Ticket,
-              href: null,
-              color: "text-amber-600 dark:text-amber-400",
-            },
-          ].map((item) => {
-            const Icon = item.icon;
-            const content = (
-              <div className="flex items-center gap-4 bg-background px-4 py-5 sm:px-6">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted ${item.color}`}>
-                  <Icon className="h-5 w-5" />
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-0">
+          <div className="flex gap-3 overflow-x-auto scrollbar-none [-webkit-overflow-scrolling:touch] sm:grid sm:grid-cols-4 sm:gap-px sm:overflow-visible sm:bg-border/50">
+            {[
+              {
+                label: "Reg",
+                labelLong: "Registrations",
+                value: event._count.registrations,
+                icon: Users,
+                href: `/events/${event.id}/registrations`,
+                color: "text-violet-600 dark:text-violet-400",
+              },
+              {
+                label: "Sessions",
+                labelLong: "Sessions",
+                value: event.sessions.length,
+                icon: Radio,
+                href: null,
+                color: "text-blue-600 dark:text-blue-400",
+              },
+              {
+                label: "Stations",
+                labelLong: "Stations",
+                value: event._count.stations,
+                icon: QrCode,
+                href: `/events/${event.id}/stations`,
+                color: "text-teal-600 dark:text-teal-400",
+              },
+              {
+                label: "Revenue",
+                labelLong: "Revenue",
+                value: `${currency === "USD" ? "$" : ""}${totalRevenue.toFixed(0)}${currency !== "USD" ? ` ${currency}` : ""}`,
+                icon: Ticket,
+                href: null,
+                color: "text-amber-600 dark:text-amber-400",
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              const content = (
+                <div className="flex min-w-28 items-center gap-3 rounded-xl border bg-background px-4 py-3 sm:min-w-0 sm:rounded-none sm:border-0 sm:py-5 sm:px-6">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted sm:h-10 sm:w-10 sm:rounded-xl ${item.color}`}>
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold tabular-nums tracking-tight sm:text-2xl">{item.value}</p>
+                    <p className="text-[11px] font-medium text-muted-foreground sm:text-xs sm:uppercase sm:tracking-wider">
+                      <span className="sm:hidden">{item.label}</span>
+                      <span className="hidden sm:inline">{item.labelLong}</span>
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight">{item.value}</p>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{item.label}</p>
+              );
+              return item.href ? (
+                <Link key={item.label} href={item.href} className="block shrink-0 transition-colors hover:bg-muted/50 sm:shrink">
+                  {content}
+                </Link>
+              ) : (
+                <div key={item.label} className="shrink-0 sm:shrink">
+                  {content}
                 </div>
-              </div>
-            );
-            return item.href ? (
-              <Link key={item.label} href={item.href} className="block transition-colors hover:bg-muted/50">
-                {content}
-              </Link>
-            ) : (
-              <div key={item.label}>{content}</div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* ── Main content ── */}
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-3">
+      {/* ── Main content (tighter on mobile) ── */}
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
           {/* Left column ── */}
-          <div className="space-y-8 lg:col-span-2">
-            {/* Event details (Overview) */}
+          <div className="space-y-6 lg:col-span-2 lg:space-y-8">
+            {/* Event details — single card, list style */}
             <section>
-              <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:mb-4 sm:text-sm">
                 Event details
               </h2>
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden border-0 shadow-sm sm:border">
                 {event.description && (
-                  <CardContent className="border-b pt-5 pb-4">
+                  <div className="border-b border-border/60 bg-muted/20 px-4 py-3.5 sm:px-5 sm:py-4">
                     <p className="text-sm leading-relaxed text-muted-foreground">{event.description}</p>
-                  </CardContent>
+                  </div>
                 )}
-                <CardContent className="pt-4">
-                  <dl className="grid gap-4 sm:grid-cols-2">
-                    <div className="flex gap-3 rounded-lg border p-4">
-                      <CalendarDays className="h-5 w-5 shrink-0 text-muted-foreground" />
-                      <div>
-                        <dt className="text-xs font-medium text-muted-foreground">Start</dt>
-                        <dd className="mt-0.5 text-sm font-medium">{new Date(event.startDate).toLocaleString()}</dd>
+                <dl className="divide-y divide-border/60">
+                  {[
+                    {
+                      icon: CalendarDays,
+                      label: "Start",
+                      value: new Date(event.startDate).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }),
+                      iconBg: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                    },
+                    {
+                      icon: Clock,
+                      label: "End",
+                      value: new Date(event.endDate).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }),
+                      iconBg: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+                    },
+                    {
+                      icon: Users,
+                      label: "Capacity",
+                      value: event.capacity === 0 ? "Unlimited" : String(event.capacity),
+                      iconBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    },
+                    {
+                      icon: Globe,
+                      label: "Timezone",
+                      value: event.timezone.replace(/_/g, " "),
+                      iconBg: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                    },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.label}
+                        className="flex items-center gap-4 px-4 py-3.5 sm:px-5 sm:py-4"
+                      >
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl ${item.iconBg}`}
+                        >
+                          <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">
+                            {item.label}
+                          </dt>
+                          <dd className="mt-0.5 truncate text-sm font-medium text-foreground sm:text-base">
+                            {item.value}
+                          </dd>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-3 rounded-lg border p-4">
-                      <Clock className="h-5 w-5 shrink-0 text-muted-foreground" />
-                      <div>
-                        <dt className="text-xs font-medium text-muted-foreground">End</dt>
-                        <dd className="mt-0.5 text-sm font-medium">{new Date(event.endDate).toLocaleString()}</dd>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 rounded-lg border p-4">
-                      <Users className="h-5 w-5 shrink-0 text-muted-foreground" />
-                      <div>
-                        <dt className="text-xs font-medium text-muted-foreground">Capacity</dt>
-                        <dd className="mt-0.5 text-sm font-medium">{event.capacity === 0 ? "Unlimited" : event.capacity}</dd>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 rounded-lg border p-4">
-                      <MapPin className="h-5 w-5 shrink-0 text-muted-foreground" />
-                      <div>
-                        <dt className="text-xs font-medium text-muted-foreground">Timezone</dt>
-                        <dd className="mt-0.5 text-sm font-medium">{event.timezone}</dd>
-                      </div>
-                    </div>
-                  </dl>
-                </CardContent>
+                    );
+                  })}
+                </dl>
               </Card>
             </section>
 
             {/* Sessions */}
             <section>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="mb-3 flex items-center justify-between sm:mb-4">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-sm">
                   Sessions ({event.sessions.length})
                 </h2>
                 <Button asChild size="sm" className="btn-gradient rounded-lg text-xs">
@@ -260,7 +296,7 @@ export default async function EventPage({ params }: EventPageProps) {
               <Card>
                 <CardContent className="p-0">
                   {event.sessions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="flex flex-col items-center justify-center py-10 text-center sm:py-12">
                       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
                         <Radio className="h-6 w-6 text-muted-foreground" />
                       </div>
@@ -274,19 +310,19 @@ export default async function EventPage({ params }: EventPageProps) {
                     <ul className="divide-y">
                       {event.sessions.map((s) => (
                         <li key={s.id}>
-                          <div className="flex items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-muted/40">
-                            <div className="flex min-w-0 items-center gap-4">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
-                                <Radio className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <div className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:gap-4 sm:py-4">
+                            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 sm:h-10 sm:w-10 sm:rounded-xl">
+                                <Radio className="h-4 w-4 text-blue-600 dark:text-blue-400 sm:h-5 sm:w-5" />
                               </div>
                               <div className="min-w-0">
                                 <p className="font-medium text-foreground">{s.name}</p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                <p className="mt-0.5 truncate text-xs text-muted-foreground">
                                   {new Date(s.startTime).toLocaleString()} – {new Date(s.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                 </p>
                               </div>
                             </div>
-                            <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:px-2.5 sm:py-1 sm:text-[11px]">
                               {s.type}
                             </span>
                           </div>
@@ -300,8 +336,8 @@ export default async function EventPage({ params }: EventPageProps) {
 
             {/* Ticket types & revenue */}
             <section>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="mb-3 flex items-center justify-between sm:mb-4">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-sm">
                   Ticket types & revenue
                 </h2>
                 <Button asChild size="sm" variant="outline" className="rounded-lg text-xs">
@@ -311,7 +347,7 @@ export default async function EventPage({ params }: EventPageProps) {
               <Card>
                 <CardContent className="p-0">
                   {event.ticketTypes.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="flex flex-col items-center justify-center py-10 text-center sm:py-12">
                       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
                         <Ticket className="h-6 w-6 text-muted-foreground" />
                       </div>
@@ -327,13 +363,13 @@ export default async function EventPage({ params }: EventPageProps) {
                         {event.ticketTypes.map((ticket) => {
                           const pct = ticket.quantity > 0 ? (ticket.sold / ticket.quantity) * 100 : 0;
                           return (
-                            <li key={ticket.id} className="px-4 py-4">
-                              <div className="flex items-center justify-between gap-4">
+                            <li key={ticket.id} className="px-4 py-3 sm:py-4">
+                              <div className="flex items-center justify-between gap-3 sm:gap-4">
                                 <div className="flex min-w-0 items-center gap-3">
                                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
                                     <Ticket className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                                   </div>
-                                  <div>
+                                  <div className="min-w-0">
                                     <p className="font-medium text-foreground">{ticket.name}</p>
                                     <p className="text-xs text-muted-foreground">
                                       {ticket.sold} / {ticket.quantity} sold
@@ -354,9 +390,9 @@ export default async function EventPage({ params }: EventPageProps) {
                           );
                         })}
                       </ul>
-                      <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-3">
-                        <span className="text-sm font-medium text-muted-foreground">Total revenue</span>
-                        <span className="text-lg font-bold tabular-nums">
+                      <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2.5 sm:py-3">
+                        <span className="text-xs font-medium text-muted-foreground sm:text-sm">Total revenue</span>
+                        <span className="text-base font-bold tabular-nums sm:text-lg">
                           {totalRevenue.toFixed(2)} {currency}
                         </span>
                       </div>
@@ -367,106 +403,143 @@ export default async function EventPage({ params }: EventPageProps) {
             </section>
           </div>
 
-          {/* Right sidebar ── */}
-          <aside className="space-y-6">
-            {/* Primary actions */}
-            <Card className="overflow-hidden border-primary/10 shadow-sm">
-              <div className={`h-1 bg-linear-to-r ${status.gradient}`} />
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Actions</CardTitle>
-                <CardDescription>Manage registrations and check-in</CardDescription>
+          {/* Right sidebar — list-style cards, no top color bars */}
+          <aside className="space-y-4 sm:space-y-6">
+            {/* Actions */}
+            <Card>
+              <CardHeader className="pb-2 pt-4 sm:pb-3 sm:px-5 sm:pt-5">
+                <CardTitle className="text-sm font-semibold sm:text-base">Actions</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground sm:text-sm">
+                  Manage registrations and check-in
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="rounded-lg border bg-muted/50 px-2 py-1.5 text-xs text-muted-foreground">
-                  Add scanners in <Link href="/organizations/members" className="font-medium text-primary underline">Team & scanners</Link>; they sign in and open Check-in here.
+              <CardContent className="px-0 pb-4 pt-0 sm:px-5 sm:pb-5">
+                <p className="mb-3 px-4 text-[11px] text-muted-foreground sm:mb-4 sm:px-0 sm:text-xs">
+                  Add scanners in <Link href="/organizations/members" className="font-medium text-primary underline">Team & scanners</Link>; they use Check-in here.
                 </p>
-                <Button asChild className="btn-gradient w-full justify-between rounded-lg">
-                  <Link href={`/events/${event.id}/registrations`}>
-                    <span className="flex items-center gap-2">
-                      <ClipboardList className="h-4 w-4" />
-                      View registrations
-                    </span>
-                    <ChevronRight className="h-4 w-4 opacity-70" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-between rounded-lg" size="default">
-                  <Link href={`/events/${event.id}/stations`}>
-                    <span className="flex items-center gap-2">
-                      <QrCode className="h-4 w-4" />
-                      Stations
-                    </span>
-                    <ChevronRight className="h-4 w-4 opacity-50" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-between rounded-lg" size="default">
-                  <Link href={`/events/${event.id}/check-in`}>
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Check-in station
-                    </span>
-                    <ChevronRight className="h-4 w-4 opacity-50" />
-                  </Link>
-                </Button>
+                <ul className="divide-y divide-border/60 sm:rounded-lg sm:border sm:border-border/60">
+                  <li>
+                    <Link
+                      href={`/events/${event.id}/registrations`}
+                      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 sm:h-8 sm:w-8">
+                        <ClipboardList className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                      </div>
+                      <span className="flex-1 font-medium text-foreground">View registrations</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`/events/${event.id}/stations`}
+                      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 sm:h-8 sm:w-8">
+                        <QrCode className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <span className="flex-1 font-medium text-foreground">Stations</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`/events/${event.id}/check-in`}
+                      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 sm:h-8 sm:w-8">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="flex-1 font-medium text-foreground">Check-in station</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                </ul>
               </CardContent>
             </Card>
 
             {/* Reports */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Reports</CardTitle>
-                <CardDescription>Attendance and analytics</CardDescription>
+              <CardHeader className="pb-2 pt-4 sm:pb-3 sm:px-5 sm:pt-5">
+                <CardTitle className="text-sm font-semibold sm:text-base">Reports</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground sm:text-sm">
+                  Attendance and analytics
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Button asChild variant="outline" className="w-full justify-between rounded-lg" size="default">
-                  <Link href={`/events/${event.id}/attendance`}>
-                    <span className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Attendance report
-                    </span>
-                    <ChevronRight className="h-4 w-4 opacity-50" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-between rounded-lg" size="default">
-                  <Link href={`/events/${event.id}/analytics`}>
-                    <span className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      Live analytics
-                    </span>
-                    <ChevronRight className="h-4 w-4 opacity-50" />
-                  </Link>
-                </Button>
-                {event.ticketTypes.length > 0 && (
-                  <Button asChild variant="outline" className="w-full justify-between rounded-lg" size="default">
-                    <a href={`/api/events/${event.id}/revenue/export?format=csv`} target="_blank" rel="noopener noreferrer" download>
-                      <span className="flex items-center gap-2">
-                        <Ticket className="h-4 w-4" />
-                        Export revenue CSV
-                      </span>
-                      <ExternalLink className="h-4 w-4 opacity-50" />
-                    </a>
-                  </Button>
-                )}
+              <CardContent className="px-0 pb-4 pt-0 sm:px-5 sm:pb-5">
+                <ul className="divide-y divide-border/60 sm:rounded-lg sm:border sm:border-border/60">
+                  <li>
+                    <Link
+                      href={`/events/${event.id}/attendance`}
+                      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 sm:h-8 sm:w-8">
+                        <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="flex-1 font-medium text-foreground">Attendance report</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href={`/events/${event.id}/analytics`}
+                      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 sm:h-8 sm:w-8">
+                        <BarChart3 className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <span className="flex-1 font-medium text-foreground">Live analytics</span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </Link>
+                  </li>
+                  {event.ticketTypes.length > 0 && (
+                    <li>
+                      <a
+                        href={`/api/events/${event.id}/revenue/export?format=csv`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 sm:h-8 sm:w-8">
+                          <Ticket className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <span className="flex-1 font-medium text-foreground">Export revenue CSV</span>
+                        <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      </a>
+                    </li>
+                  )}
+                </ul>
               </CardContent>
             </Card>
 
             {/* Public registration */}
             {(event.status === "PUBLISHED" || event.status === "ONGOING") && (
-              <Card className="overflow-hidden border-emerald-500/20">
-                <div className="h-1 bg-linear-to-r from-emerald-500 to-teal-500" />
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Public registration</CardTitle>
-                  <CardDescription>Share this link with attendees</CardDescription>
+              <Card>
+                <CardHeader className="pb-2 pt-4 sm:pb-3 sm:px-5 sm:pt-5">
+                  <CardTitle className="text-sm font-semibold sm:text-base">Public registration</CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground sm:text-sm">
+                    Share this link with attendees
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <code className="block break-all rounded-lg border bg-muted/50 px-3 py-2.5 text-xs font-mono text-muted-foreground">
-                    /register/{event.id}
-                  </code>
-                  <Button asChild size="sm" className="btn-gradient w-full rounded-lg">
-                    <Link href={`/register/${event.id}`} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                      Open registration page
-                    </Link>
-                  </Button>
+                <CardContent className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+                  <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 sm:py-3">
+                    <code className="block break-all text-[11px] font-mono text-muted-foreground sm:text-xs">
+                      /register/{event.id}
+                    </code>
+                  </div>
+                  <Link
+                    href={`/register/${event.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3.5 transition-colors hover:bg-muted/40 active:bg-muted/60 sm:mt-4 sm:py-3"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 sm:h-8 sm:w-8">
+                      <ExternalLink className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <span className="flex-1 font-medium text-foreground">Open registration page</span>
+                    <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Link>
                 </CardContent>
               </Card>
             )}

@@ -26,8 +26,22 @@ export async function GET(
       timezone: true,
       location: true,
       status: true,
+      capacity: true,
+      coverImage: true,
+      brandingSettings: true,
+      organization: { select: { name: true, logo: true } },
+      sections: {
+        where: { isVisible: true },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          type: true,
+          sortOrder: true,
+        },
+      },
       ticketTypes: {
-        where: {},
         select: {
           id: true,
           name: true,
@@ -35,6 +49,7 @@ export async function GET(
           currency: true,
           quantity: true,
           sold: true,
+          perks: true,
         },
       },
       sessions: {
@@ -42,13 +57,17 @@ export async function GET(
         select: {
           id: true,
           name: true,
+          description: true,
           type: true,
           startTime: true,
           endTime: true,
           track: true,
           room: true,
+          capacity: true,
+          speakers: true,
         },
       },
+      _count: { select: { registrations: true } },
     },
   });
 
@@ -61,6 +80,7 @@ export async function GET(
       ...event,
       ticketTypes: event.ticketTypes.filter((t) => t.sold < t.quantity),
       sessions: event.sessions ?? [],
+      sections: event.sections ?? [],
     },
   });
 }

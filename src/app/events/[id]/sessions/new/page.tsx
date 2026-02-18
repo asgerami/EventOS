@@ -80,29 +80,25 @@ export default function NewSessionPage() {
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-3xl">
-        <header className="mb-8">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="mb-4"
-          >
-            <Link href={`/events/${eventId}`}>← Back to event</Link>
-          </Button>
-          <h1 className="text-3xl font-semibold">Add new session</h1>
-          <p className="text-muted-foreground">
-            Create a session or activity within your event
-          </p>
+    <div className="flex-1 min-h-0">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+        <nav className="mb-4 flex items-center gap-2 text-sm">
+          <Link href="/events" className="text-muted-foreground transition-colors hover:text-foreground">Events</Link>
+          <span className="text-muted-foreground/60">/</span>
+          <Link href={`/events/${eventId}`} className="truncate text-muted-foreground transition-colors hover:text-foreground">Event</Link>
+          <span className="text-muted-foreground/60">/</span>
+          <span className="truncate font-medium text-foreground">Add session</span>
+        </nav>
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Add session</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Create a session or activity within your event</p>
         </header>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-6">
-            {/* Basic Information */}
             <Card>
-              <CardHeader>
-                <CardTitle>Session details</CardTitle>
+              <CardHeader className="pb-2 sm:px-6 sm:pt-6">
+                <CardTitle className="text-base sm:text-lg">Session details</CardTitle>
                 <CardDescription>
                   Information about this session or activity
                 </CardDescription>
@@ -263,25 +259,18 @@ export default function NewSessionPage() {
               </CardContent>
             </Card>
 
-            {/* Error display */}
             {error && (
-              <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-4">
+              <Button type="submit" disabled={loading} className="rounded-lg">
                 {loading ? "Creating..." : "Create session"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading} className="rounded-lg">
+                Cancel
               </Button>
             </div>
           </div>

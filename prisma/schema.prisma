@@ -169,13 +169,16 @@ model Event {
   visibility  String   // public, private, unlisted
   status      EventStatus @default(DRAFT)
   
+  coverImage   String?  @db.Text // base64 data URI for public page hero
+
   registrationSettings Json? // { approvalRequired, maxSessions, customFields... }
-  brandingSettings     Json? // { logo, colors, badgeTemplate }
+  brandingSettings     Json? // { primaryColor, accentColor, badgeTemplate }
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime? // Soft delete
 
+  sections      EventSection[]
   sessions      EventSession[]
   ticketTypes   TicketType[]
   registrations Registration[]
@@ -183,6 +186,23 @@ model Event {
 
   @@unique([tenantId, slug])
   @@index([tenantId, status])
+}
+
+model EventSection {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  title     String
+  content   String   @db.Text
+  type      String   // "about" | "faq" | "sponsors" | "custom"
+  sortOrder Int      @default(0)
+  isVisible Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId, sortOrder])
 }
 
 model EventSession {

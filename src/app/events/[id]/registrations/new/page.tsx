@@ -95,24 +95,30 @@ export default function NewRegistrationPage() {
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-xl">
-        <header className="mb-8">
-          <Button asChild variant="ghost" size="sm" className="mb-4">
-            <Link href={`/events/${eventId}/registrations`}>← Back to registrations</Link>
-          </Button>
-          <h1 className="text-3xl font-semibold">Add registration</h1>
-          <p className="text-muted-foreground">Register an attendee for this event</p>
+    <div className="flex-1 min-h-0">
+      <div className="mx-auto max-w-xl px-4 py-6 sm:px-6 sm:py-8">
+        <nav className="mb-4 flex items-center gap-2 text-sm">
+          <Link href="/events" className="text-muted-foreground transition-colors hover:text-foreground">Events</Link>
+          <span className="text-muted-foreground/60">/</span>
+          <Link href={`/events/${eventId}`} className="truncate text-muted-foreground transition-colors hover:text-foreground">Event</Link>
+          <span className="text-muted-foreground/60">/</span>
+          <Link href={`/events/${eventId}/registrations`} className="truncate text-muted-foreground transition-colors hover:text-foreground">Registrations</Link>
+          <span className="text-muted-foreground/60">/</span>
+          <span className="truncate font-medium text-foreground">Add</span>
+        </nav>
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Add registration</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Register an attendee for this event</p>
         </header>
 
         <form onSubmit={handleSubmit}>
           <Card>
-            <CardHeader>
-              <CardTitle>Attendee details</CardTitle>
+            <CardHeader className="pb-2 sm:px-6 sm:pt-6">
+              <CardTitle className="text-base sm:text-lg">Attendee details</CardTitle>
               <CardDescription>Name and email</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-4 sm:px-6 sm:pb-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First name *</Label>
                   <Input
@@ -216,11 +222,11 @@ export default function NewRegistrationPage() {
                 </div>
               )}
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={loading || ticketTypes.length === 0}>
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:gap-2">
+                <Button type="submit" disabled={loading || ticketTypes.length === 0} className="rounded-lg">
                   {loading ? "Creating..." : "Create registration"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
+                <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading} className="rounded-lg">
                   Cancel
                 </Button>
               </div>

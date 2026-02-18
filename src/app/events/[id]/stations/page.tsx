@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ChevronRight } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -41,67 +42,68 @@ export default async function EventStationsPage({ params }: PageProps) {
   });
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="mx-auto max-w-2xl">
-        <header className="mb-8">
-          <Button asChild variant="ghost" size="sm" className="mb-4">
-            <Link href={`/events/${eventId}`}>← Back to event</Link>
-          </Button>
-          <h1 className="text-3xl font-semibold">Stations</h1>
-          <p className="text-muted-foreground">{event.name}</p>
-        </header>
+    <div className="flex-1 min-h-0">
+      <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+        <nav className="mb-4 flex items-center gap-2 text-sm">
+          <Link href="/events" className="text-muted-foreground transition-colors hover:text-foreground">
+            Events
+          </Link>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+          <Link href={`/events/${eventId}`} className="truncate text-muted-foreground transition-colors hover:text-foreground">
+            {event.name}
+          </Link>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+          <span className="truncate font-medium text-foreground">Stations</span>
+        </nav>
 
-        <div className="mb-6">
-          <Button asChild>
+        <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">Stations</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{event.name}</p>
+          </div>
+          <Button asChild size="sm" className="w-full rounded-lg sm:w-auto">
             <Link href={`/events/${eventId}/stations/new`}>Add station</Link>
           </Button>
-        </div>
+        </header>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Check-in stations</CardTitle>
-            <CardDescription>
-              Stations where staff can scan tickets and check in attendees
-            </CardDescription>
+          <CardHeader className="pb-2 sm:px-6 sm:pt-6">
+            <CardTitle className="text-base sm:text-lg">Check-in stations</CardTitle>
+            <CardDescription>Stations where staff scan tickets and check in attendees</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="sm:px-6 sm:pb-6">
             {stations.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <p className="mb-4">No stations yet.</p>
-                <Button asChild>
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">No stations yet.</p>
+                <Button asChild size="sm" className="mt-4 rounded-lg">
                   <Link href={`/events/${eventId}/stations/new`}>Add first station</Link>
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <ul className="divide-y divide-border/60">
                 {stations.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
-                    <div>
-                      <p className="font-medium">{s.name}</p>
+                  <li key={s.id} className="flex items-center justify-between gap-4 py-4 first:pt-0">
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground">{s.name}</p>
                       <p className="text-sm capitalize text-muted-foreground">
                         {s.type.replace("_", " ")} · {s._count.checkIns} check-ins
                       </p>
                     </div>
-                    <span
-                      className={`text-xs ${s.isActive ? "text-green-600" : "text-muted-foreground"}`}
-                    >
+                    <span className={`shrink-0 text-xs font-medium ${s.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
                       {s.isActive ? "Active" : "Inactive"}
                     </span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </CardContent>
         </Card>
 
         <div className="mt-6 flex flex-wrap gap-2">
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" size="sm" className="rounded-lg">
             <Link href={`/events/${eventId}/check-in`}>Open check-in</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="sm" className="rounded-lg">
             <Link href="/organizations/members">Team & scanners</Link>
           </Button>
         </div>

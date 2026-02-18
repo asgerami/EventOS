@@ -17,6 +17,7 @@ export const createEventSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens")
     .optional(),
   description: z.string().max(5000).optional().nullable(),
+  coverImage: z.string().optional().nullable(),
   location: z
     .object({
       venue: z.string().optional(),
