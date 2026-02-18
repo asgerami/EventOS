@@ -78,9 +78,9 @@ export default function CheckInPage() {
         }
         return res.json();
       })
-      .then((data) => {
+      .then((data: Record<string, unknown>) => {
         if (data.todayCount !== undefined)
-          setStats({ todayCount: data.todayCount, totalCount: data.totalCount });
+          setStats({ todayCount: data.todayCount as number, totalCount: data.totalCount as number });
       })
       .catch(() => {});
   }, [eventId]);

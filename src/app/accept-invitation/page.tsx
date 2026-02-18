@@ -1,14 +1,14 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const searchParams = useSearchParams();
   const invitationId = searchParams.get("invitationId");
   const [status, setStatus] = useState<"loading" | "success" | "error" | "wrong-account" | "need-login">("loading");
@@ -78,76 +78,89 @@ export default function AcceptInvitationPage() {
   }, [invitationId]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Invitation</CardTitle>
-          <CardDescription>
-            {status === "loading" && "Accepting invitation…"}
-            {status === "need-login" && "Sign in to join"}
-            {status === "success" && "You're in"}
-            {status === "wrong-account" && "Wrong account"}
-            {status === "error" && "Unable to accept"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {status === "loading" && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          )}
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle>Invitation</CardTitle>
+        <CardDescription>
+          {status === "loading" && "Accepting invitation…"}
+          {status === "need-login" && "Sign in to join"}
+          {status === "success" && "You're in"}
+          {status === "wrong-account" && "Wrong account"}
+          {status === "error" && "Unable to accept"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {status === "loading" && (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
 
-          {status === "wrong-account" && (
-            <>
-              <p className="text-sm text-muted-foreground">{message}</p>
-              <div className="flex gap-2">
-                <Button onClick={handleSignOut} className="btn-gradient rounded-lg">
-                  Sign out &amp; switch account
-                </Button>
-                <Button asChild variant="outline" className="rounded-lg">
-                  <Link href="/dashboard">Go to dashboard</Link>
-                </Button>
-              </div>
-            </>
-          )}
-
-          {status === "need-login" && (
-            <>
-              <p className="text-sm text-muted-foreground">{message}</p>
-              <div className="flex gap-2">
-                <Button asChild className="btn-gradient rounded-lg">
-                  <Link href={`/sign-in?callbackUrl=${encodeURIComponent(invitationCallbackUrl)}`}>
-                    Sign in
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="rounded-lg">
-                  <Link href={`/sign-up?callbackUrl=${encodeURIComponent(invitationCallbackUrl)}`}>
-                    Create account
-                  </Link>
-                </Button>
-              </div>
-            </>
-          )}
-
-          {status === "success" && (
-            <>
-              <p className="text-sm text-muted-foreground">{message}</p>
-              <Button asChild className="btn-gradient rounded-lg">
-                <Link href="/dashboard">Go to dashboard</Link>
+        {status === "wrong-account" && (
+          <>
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <div className="flex gap-2">
+              <Button onClick={handleSignOut} className="btn-gradient rounded-lg">
+                Sign out &amp; switch account
               </Button>
-            </>
-          )}
-
-          {status === "error" && (
-            <>
-              <p className="text-sm text-muted-foreground">{message}</p>
               <Button asChild variant="outline" className="rounded-lg">
                 <Link href="/dashboard">Go to dashboard</Link>
               </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </div>
+          </>
+        )}
+
+        {status === "need-login" && (
+          <>
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <div className="flex gap-2">
+              <Button asChild className="btn-gradient rounded-lg">
+                <Link href={`/sign-in?callbackUrl=${encodeURIComponent(invitationCallbackUrl)}`}>
+                  Sign in
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-lg">
+                <Link href={`/sign-up?callbackUrl=${encodeURIComponent(invitationCallbackUrl)}`}>
+                  Create account
+                </Link>
+              </Button>
+            </div>
+          </>
+        )}
+
+        {status === "success" && (
+          <>
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <Button asChild className="btn-gradient rounded-lg">
+              <Link href="/dashboard">Go to dashboard</Link>
+            </Button>
+          </>
+        )}
+
+        {status === "error" && (
+          <>
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <Button asChild variant="outline" className="rounded-lg">
+              <Link href="/dashboard">Go to dashboard</Link>
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function AcceptInvitationPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Suspense fallback={
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading...</span>
+        </div>
+      }>
+        <AcceptInvitationContent />
+      </Suspense>
     </div>
   );
 }

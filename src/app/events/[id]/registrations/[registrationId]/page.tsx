@@ -65,7 +65,7 @@ export default async function AttendeeDetailPage({ params }: PageProps) {
       },
       badges: {
         orderBy: { printedAt: "desc" },
-        select: { id: true, printedAt: true, template: true },
+        select: { id: true, printedAt: true, reason: true },
       },
     },
   });
@@ -293,7 +293,7 @@ export default async function AttendeeDetailPage({ params }: PageProps) {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">Badge printed</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            Template: {b.template || "default"}
+                            Reason: {b.reason || "initial"}
                           </p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {new Date(b.printedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at{" "}

@@ -365,7 +365,7 @@ export default function PublicRegisterPage() {
               <div id="agenda">
                 <h2 className="mb-6 text-xl font-semibold sm:text-2xl">Agenda</h2>
                 <div className="space-y-8">
-                  {[...agendaMap.entries()].map(([dateLabel, dateSessions]) => (
+                  {[...agendaMap.entries()].map(([dateLabel, dateSessions]: [string, SessionOption[]]) => (
                     <div key={dateLabel}>
                       <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{dateLabel}</h3>
                       <div className="space-y-3">

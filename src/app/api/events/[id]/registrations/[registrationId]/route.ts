@@ -33,7 +33,7 @@ export const GET = withTenantHandler(
         },
         badges: {
           orderBy: { printedAt: "desc" },
-          select: { id: true, printedAt: true, template: true },
+          select: { id: true, printedAt: true, reason: true },
         },
       },
     });
