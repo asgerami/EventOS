@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import { Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +34,7 @@ export default function SignUpPage() {
     await authClient.signUp.email(
       { name, email, password },
       {
-        onSuccess: () => router.push("/dashboard"),
+        onSuccess: () => router.push(callbackUrl),
         onError: (ctx) => {
           setError(ctx.error?.message ?? "Sign up failed");
           setLoading(false);
@@ -130,7 +132,7 @@ export default function SignUpPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <Link href="/sign-in" className="font-medium text-primary hover:underline">
+                <Link href={callbackUrl !== "/dashboard" ? `/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/sign-in"} className="font-medium text-primary hover:underline">
                   Sign in
                 </Link>
               </p>

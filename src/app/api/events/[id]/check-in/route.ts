@@ -2,13 +2,26 @@ import { NextResponse } from "next/server";
 import { withTenantHandler } from "@/lib/api-middleware";
 import { prisma } from "@/lib/db";
 
+/** Roles that are allowed to perform check-in (scan) at events */
+const SCAN_ALLOWED_ROLES = ["owner", "cohost", "staff"];
+
 /**
  * POST /api/events/[id]/check-in
  * Body: { token: string (confirmationToken), stationId: string, sessionId?: string, method?: 'qr_scan' | 'manual' | 'nfc' }
- * Performs check-in for a registration. Uses sessionId=null for general event check-in.
+ * Performs check-in for a registration. Only organization members with owner, cohost, or staff role can scan.
  */
 export const POST = withTenantHandler(
-  async (request, { tenantId, params, user }) => {
+  async (request, { tenantId, params, user, member }) => {
+    if (!SCAN_ALLOWED_ROLES.includes(member.role)) {
+      return NextResponse.json(
+        {
+          error: "Forbidden",
+          message: "Only organizers and staff (scanners) can perform check-in. Ask your event organizer to add you as staff.",
+        },
+        { status: 403 }
+      );
+    }
+
     try {
       const { id: eventId } = (await params) as { id: string };
       const body = await request.json();

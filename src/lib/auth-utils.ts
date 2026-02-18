@@ -86,6 +86,28 @@ export async function requireOrganization() {
 }
 
 /**
+ * Get current member role in the active organization.
+ */
+export async function getActiveMemberRole() {
+  const session = await getSession();
+  if (!session?.user) return null;
+
+  const organization = await getActiveOrganization();
+  if (!organization) return null;
+
+  const { prisma } = await import("@/lib/db");
+  const member = await prisma.member.findFirst({
+    where: {
+      organizationId: organization.id,
+      userId: session.user.id,
+    },
+    select: { role: true },
+  });
+
+  return member?.role ?? null;
+}
+
+/**
  * Require the current user to be Super Admin (email in SUPER_ADMIN_EMAIL env).
  * Redirects to dashboard if not allowed.
  */

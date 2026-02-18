@@ -13,7 +13,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ScanLine, Keyboard, CameraOff, CloudOff, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  ScanLine,
+  Keyboard,
+  CameraOff,
+  CloudOff,
+  RefreshCw,
+  ShieldAlert,
+  CheckCircle2,
+  Wifi,
+  QrCode,
+} from "lucide-react";
 import {
   addToOfflineQueue,
   getOfflineQueue,
@@ -42,22 +53,51 @@ export default function CheckInPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState<{
+    type: "idle" | "scanning" | "success" | "error";
+    text: string;
+  }>({ type: "idle", text: "Ready to scan" });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const scanLoopRef = useRef<number | null>(null);
+  const zxingControlsRef = useRef<{ stop: () => void } | null>(null);
   const submitTokenRef = useRef<(t: string, method?: "manual" | "qr_scan") => Promise<void>>(() => Promise.resolve());
+  const scanInFlightRef = useRef(false);
+  const lastScanRef = useRef<{ value: string; at: number }>({ value: "", at: 0 });
+  const feedbackTimeoutRef = useRef<number | null>(null);
+
+  const [scanAccessDenied, setScanAccessDenied] = useState(false);
 
   const fetchStats = useCallback(() => {
     fetch(`/api/events/${eventId}/check-in/stats`, { credentials: "include" })
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 403) {
+          setScanAccessDenied(true);
+          return {};
+        }
+        return res.json();
+      })
       .then((data) => {
         if (data.todayCount !== undefined)
           setStats({ todayCount: data.todayCount, totalCount: data.totalCount });
       })
       .catch(() => {});
   }, [eventId]);
+
+  const setTransientFeedback = useCallback(
+    (type: "scanning" | "success" | "error", text: string, durationMs = 1400) => {
+      setScanFeedback({ type, text });
+      if (feedbackTimeoutRef.current) {
+        window.clearTimeout(feedbackTimeoutRef.current);
+      }
+      feedbackTimeoutRef.current = window.setTimeout(() => {
+        setScanFeedback({ type: "idle", text: "Ready to scan" });
+        feedbackTimeoutRef.current = null;
+      }, durationMs);
+    },
+    []
+  );
 
   // Load stations and initial stats
   useEffect(() => {
@@ -83,13 +123,14 @@ export default function CheckInPage() {
     return () => clearInterval(interval);
   }, [fetchStats]);
 
-  // BarcodeDetector support (Chrome, Edge, Android; not Safari)
+  // Detect camera API availability.
   useEffect(() => {
-    setCameraSupported(
-      typeof window !== "undefined" &&
-        "BarcodeDetector" in window &&
-        typeof (window as unknown as { BarcodeDetector?: unknown }).BarcodeDetector === "function"
-    );
+    const hasCameraApi =
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === "function";
+
+    setCameraSupported(hasCameraApi);
   }, []);
 
   // Camera stream and scan loop
@@ -113,55 +154,67 @@ export default function CheckInPage() {
         video.srcObject = stream;
         await video.play();
         setCameraActive(true);
+        setScanFeedback({ type: "scanning", text: "Scanning for QR..." });
 
-        type BarcodeDetectorCtor = new (options?: { formats: string[] }) => {
-          detect(element: HTMLVideoElement): Promise<Array<{ rawValue: string }>>;
-        };
-        const BarcodeDetector = (window as unknown as { BarcodeDetector: BarcodeDetectorCtor })
-          .BarcodeDetector;
-        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+        const { BrowserQRCodeReader } = await import("@zxing/browser");
+        const reader = new BrowserQRCodeReader();
 
-        const detect = async () => {
-          if (cancelled || !video.srcObject || video.readyState < 2) {
-            scanLoopRef.current = requestAnimationFrame(detect);
+        const controls = await reader.decodeFromVideoDevice(undefined, video, async (result) => {
+          if (!result) return;
+
+          const value = result.getText().trim();
+          if (!value) return;
+
+          const now = Date.now();
+          if (
+            value === lastScanRef.current.value &&
+            now - lastScanRef.current.at < 1500
+          ) {
             return;
           }
+          if (scanInFlightRef.current) return;
+
+          scanInFlightRef.current = true;
+          lastScanRef.current = { value, at: now };
+          setTransientFeedback("scanning", "QR detected. Processing...");
+
           try {
-            const codes = await detector.detect(video);
-            if (codes.length > 0 && codes[0].rawValue) {
-              const value = codes[0].rawValue.trim();
-              if (value) {
-                setToken(value);
-                setScanMode("manual");
-                stopCamera();
-                submitTokenRef.current(value, "qr_scan");
-                return;
-              }
-            }
-          } catch {
-            // ignore single-frame errors
+            await submitTokenRef.current(value, "qr_scan");
+          } finally {
+            scanInFlightRef.current = false;
           }
-          scanLoopRef.current = requestAnimationFrame(detect);
-        };
-        scanLoopRef.current = requestAnimationFrame(detect);
+        });
+
+        if (cancelled) {
+          controls.stop();
+          return;
+        }
+
+        zxingControlsRef.current = controls;
       } catch (e) {
         if (!cancelled) {
-          setCameraError(
-            e instanceof Error ? e.message : "Could not access camera. Use manual entry."
-          );
+          const message =
+            e instanceof Error && /permission|denied|notallowed/i.test(e.message)
+              ? "Camera permission was denied. Allow camera access to scan QR codes."
+              : "Live QR scanning is not available in this browser. Use manual entry or a hardware scanner.";
+          setCameraError(message);
           setCameraActive(false);
         }
       }
     };
 
     const stopCamera = () => {
+      if (zxingControlsRef.current) {
+        try {
+          zxingControlsRef.current.stop();
+        } catch {}
+        zxingControlsRef.current = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       }
       if (video.srcObject) video.srcObject = null;
-      if (scanLoopRef.current) cancelAnimationFrame(scanLoopRef.current);
-      scanLoopRef.current = null;
       setCameraActive(false);
     };
 
@@ -194,6 +247,10 @@ export default function CheckInPage() {
             type: "success",
             text: `Checked in: ${data.attendee?.name ?? "Attendee"}`,
           });
+          setTransientFeedback("success", `Checked in: ${data.attendee?.name ?? "Attendee"}`);
+          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+            navigator.vibrate(40);
+          }
           setToken("");
           fetchStats();
           inputRef.current?.focus();
@@ -202,12 +259,22 @@ export default function CheckInPage() {
             type: "error",
             text: `Already checked in: ${data.attendee ?? "Attendee"}`,
           });
+          setTransientFeedback("error", `Already checked in: ${data.attendee ?? "Attendee"}`);
           setToken("");
+        } else if (res.status === 403) {
+          setMessage({
+            type: "error",
+            text: data.message ?? data.error ?? "You don’t have permission to scan. Ask your event organizer to add you as Staff in Team & scanners.",
+          });
+          setTransientFeedback("error", "Permission denied for scanning");
         } else {
-          setMessage({ type: "error", text: data.error ?? "Check-in failed" });
+          const errText = data.error ?? data.message ?? "Check-in failed";
+          setMessage({ type: "error", text: errText });
+          setTransientFeedback("error", errText);
         }
       } catch {
         setMessage({ type: "error", text: "Network error. Queued for sync when online." });
+        setTransientFeedback("error", "Offline - scan queued");
         try {
           await addToOfflineQueue({
             eventId,
@@ -219,12 +286,13 @@ export default function CheckInPage() {
           setPendingQueueCount(await getOfflineQueueCount());
         } catch {
           setMessage({ type: "error", text: "Network error. Could not queue." });
+          setTransientFeedback("error", "Could not queue scan");
         }
       } finally {
         setLoading(false);
       }
     },
-    [eventId, stationId, fetchStats]
+    [eventId, stationId, fetchStats, setTransientFeedback]
   );
 
   useEffect(() => {
@@ -243,6 +311,14 @@ export default function CheckInPage() {
     if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        window.clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -311,226 +387,291 @@ export default function CheckInPage() {
   };
 
   const stopCamera = () => {
+    if (zxingControlsRef.current) {
+      try {
+        zxingControlsRef.current.stop();
+      } catch {}
+      zxingControlsRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     if (videoRef.current?.srcObject) videoRef.current.srcObject = null;
-    if (scanLoopRef.current) cancelAnimationFrame(scanLoopRef.current);
-    scanLoopRef.current = null;
     setCameraActive(false);
     setScanMode("manual");
   };
 
+  const canScan = !scanAccessDenied && stations.length > 0;
+  const canUseCamera = cameraSupported === true && canScan;
+  const feedbackTone: Record<typeof scanFeedback.type, string> = {
+    idle: "bg-muted/70 text-muted-foreground",
+    scanning: "bg-blue-500/20 text-blue-700 dark:text-blue-300",
+    success: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+    error: "bg-destructive/20 text-destructive",
+  };
+
   return (
     <div className="min-h-screen bg-background pb-safe">
-      {/* Sticky header - mobile friendly */}
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[padding:env(safe-area-inset-top)]:pt-[env(safe-area-inset-top)]">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <Button asChild variant="ghost" size="icon" className="shrink-0 -ml-1">
+      <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[padding:env(safe-area-inset-top)]:pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+          <Button asChild variant="ghost" size="icon" className="shrink-0">
             <Link href={`/events/${eventId}`}>←</Link>
           </Button>
+
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-semibold">Check-in</h1>
-            <p className="truncate text-xs text-muted-foreground">Scan or enter ticket code</p>
+            <h1 className="truncate text-lg font-semibold tracking-tight">Check-in Terminal</h1>
+            <p className="truncate text-xs text-muted-foreground">Fast QR check-in</p>
+          </div>
+
+          <div className="hidden items-center gap-2 md:flex">
+            <div className="inline-flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
+              {isOnline ? <Wifi className="h-3.5 w-3.5 text-emerald-500" /> : <CloudOff className="h-3.5 w-3.5 text-amber-500" />}
+              <span className="font-medium">{isOnline ? "Online" : "Offline"}</span>
+            </div>
+            <div className="inline-flex items-center gap-1 rounded-md border bg-muted/30 px-2 py-1 text-xs">
+              <Activity className="h-3.5 w-3.5 text-primary" />
+              Queue: <span className="font-semibold tabular-nums">{pendingQueueCount}</span>
+            </div>
           </div>
         </div>
-        {/* Real-time stats bar */}
-        {stats !== null && (
-          <div className="grid grid-cols-2 gap-2 border-t px-4 py-3">
-            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
-              <span className="block text-2xl font-bold tabular-nums">{stats.todayCount}</span>
-              <span className="text-xs text-muted-foreground">Today</span>
-            </div>
-            <div className="rounded-lg bg-muted/60 px-3 py-2 text-center">
-              <span className="block text-2xl font-bold tabular-nums">{stats.totalCount}</span>
-              <span className="text-xs text-muted-foreground">Total</span>
-            </div>
-          </div>
-        )}
-        {/* Offline / queue banner */}
-        {!isOnline && (
-          <div className="flex items-center gap-2 border-t bg-amber-500/10 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
-            <CloudOff className="h-4 w-4 shrink-0" />
-            <span>You&apos;re offline. Check-ins will be queued and synced when back online.</span>
-          </div>
-        )}
-        {isOnline && pendingQueueCount > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/60 px-4 py-2 text-sm">
-            <span className="text-muted-foreground">
-              {pendingQueueCount} check-in{pendingQueueCount !== 1 ? "s" : ""} queued
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={syncing}
-              onClick={() => flushOfflineQueue()}
-            >
-              <RefreshCw className={`h-4 w-4 shrink-0 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "Syncing…" : "Sync now"}
-            </Button>
-          </div>
-        )}
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-4">
-        {/* Station selector */}
-        <Card className="mb-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Station</CardTitle>
-            <CardDescription>Select the check-in station</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No stations yet.{" "}
-                <Link href={`/events/${eventId}/stations/new`} className="underline">
-                  Add a station
-                </Link>{" "}
-                first.
-              </p>
-            ) : (
-              <select
-                className="flex h-12 w-full rounded-md border border-input bg-background px-4 py-2 text-base"
-                value={stationId}
-                onChange={(e) => setStationId(e.target.value)}
-                disabled={loading}
-              >
-                {stations.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.type}) — {s._count.checkIns} check-ins
-                  </option>
-                ))}
-              </select>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Scan mode toggle: Camera (if supported) vs Manual */}
-        {cameraSupported === true && (
-          <div className="mb-4 flex rounded-lg border bg-muted/30 p-1">
-            <button
-              type="button"
-              onClick={() => setScanMode("camera")}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-3 text-sm font-medium transition-colors ${
-                scanMode === "camera"
-                  ? "bg-background text-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              disabled={loading || stations.length === 0}
-            >
-              <ScanLine className="h-5 w-5" />
-              Scan QR
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                stopCamera();
-                setScanMode("manual");
-              }}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-3 text-sm font-medium transition-colors ${
-                scanMode === "manual"
-                  ? "bg-background text-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              disabled={loading}
-            >
-              <Keyboard className="h-5 w-5" />
-              Enter code
-            </button>
-          </div>
-        )}
-
-        {cameraSupported === false && (
-          <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <CameraOff className="h-4 w-4" />
-            Camera scan not supported in this browser. Use manual entry below.
-          </p>
-        )}
-
-        {/* Camera view */}
-        {scanMode === "camera" && cameraSupported === true && (
-          <Card className="mb-4 overflow-hidden">
-            <CardContent className="relative aspect-4/3 bg-black p-0">
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className="h-full w-full object-cover"
-                style={{ transform: "scaleX(-1)" }}
-              />
-              {cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4 text-center text-sm text-white">
-                  {cameraError}
+      <main className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6 lg:py-6">
+        <section className="space-y-4">
+          <Card className="border-border/70">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <QrCode className="h-4 w-4 text-primary" />
+                Scanner
+              </CardTitle>
+              <CardDescription>Select station, then scan.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {scanAccessDenied && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                    <div>
+                      <p className="font-medium text-destructive">You do not have scanner access</p>
+                      <p className="mt-1 text-muted-foreground">
+                        Ask an organizer to add you as <strong>Staff (scanner)</strong>.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
-              {cameraActive && !cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-56 w-56 rounded-lg border-4 border-white/50 bg-transparent" />
+
+              {!isOnline && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                  You are offline. New scans will be queued and synced automatically.
                 </div>
               )}
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="absolute bottom-2 right-2"
-                onClick={stopCamera}
-              >
-                Stop camera
-              </Button>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="station">Station</Label>
+                  {stations.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                      No stations found.{" "}
+                      <Link href={`/events/${eventId}/stations/new`} className="font-medium text-primary underline">
+                        Add station
+                      </Link>
+                    </div>
+                  ) : (
+                    <select
+                      id="station"
+                      className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm sm:text-base"
+                      value={stationId}
+                      onChange={(e) => setStationId(e.target.value)}
+                      disabled={loading || scanAccessDenied}
+                    >
+                      {stations.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.type}) - {s._count.checkIns} scans
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="space-y-2 sm:col-span-2">
+                  {cameraSupported === true ? (
+                    <div className="inline-flex rounded-lg border p-1">
+                      <button
+                        type="button"
+                        onClick={() => setScanMode("camera")}
+                        className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm ${
+                          scanMode === "camera" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                        }`}
+                        disabled={loading || !canScan}
+                      >
+                        <ScanLine className="h-4 w-4" />
+                        Camera
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          stopCamera();
+                          setScanMode("manual");
+                        }}
+                        className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm ${
+                          scanMode === "manual" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                        }`}
+                        disabled={loading || scanAccessDenied}
+                      >
+                        <Keyboard className="h-4 w-4" />
+                        Manual
+                      </button>
+                    </div>
+                  ) : cameraSupported === false ? (
+                    <div className="inline-flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                      <CameraOff className="h-4 w-4" />
+                      Camera scanning unavailable on this browser
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-md border px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Today</p>
+                  <p className="text-lg font-semibold tabular-nums">{stats?.todayCount ?? "-"}</p>
+                </div>
+                <div className="rounded-md border px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</p>
+                  <p className="text-lg font-semibold tabular-nums">{stats?.totalCount ?? "-"}</p>
+                </div>
+                <div className="rounded-md border px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Queue</p>
+                  <p className="text-lg font-semibold tabular-nums">{pendingQueueCount}</p>
+                </div>
+              </div>
+
+              {pendingQueueCount > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={syncing || !isOnline}
+                  onClick={() => flushOfflineQueue()}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Syncing..." : "Sync queued scans"}
+                </Button>
+              )}
+
+              {scanMode === "camera" && canUseCamera && (
+                <div className="overflow-hidden rounded-lg border">
+                  <div className="relative aspect-3/4 bg-black sm:aspect-4/3">
+                    <video
+                      ref={videoRef}
+                      playsInline
+                      muted
+                      className="h-full w-full object-cover"
+                    />
+                    {cameraError && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4 text-center text-sm text-white">
+                        {cameraError}
+                      </div>
+                    )}
+                    {cameraActive && !cameraError && (
+                      <div className="pointer-events-none absolute inset-0">
+                        <div className="absolute inset-0 bg-black/20" />
+                        <div className="absolute top-1/2 left-1/2 w-[68%] max-w-[300px] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]">
+                          <div className="absolute inset-0 rounded-2xl border border-white/40" />
+                          {/* QR-style corner guides */}
+                          <div className="absolute top-0 left-0 h-10 w-10 border-t-4 border-l-4 border-violet-400 rounded-tl-lg" />
+                          <div className="absolute top-0 right-0 h-10 w-10 border-t-4 border-r-4 border-violet-400 rounded-tr-lg" />
+                          <div className="absolute bottom-0 left-0 h-10 w-10 border-b-4 border-l-4 border-violet-400 rounded-bl-lg" />
+                          <div className="absolute right-0 bottom-0 h-10 w-10 border-r-4 border-b-4 border-violet-400 rounded-br-lg" />
+                          {/* subtle inner guide grid */}
+                          <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
+                            <div className="border-r border-white/10 border-b" />
+                            <div className="border-r border-white/10 border-b" />
+                            <div className="border-b border-white/10" />
+                            <div className="border-r border-white/10 border-b" />
+                            <div className="border-r border-white/10 border-b" />
+                            <div className="border-b border-white/10" />
+                            <div className="border-r border-white/10" />
+                            <div className="border-r border-white/10" />
+                            <div />
+                          </div>
+                          {/* scan line */}
+                          <div className="absolute inset-x-4 top-1/2 h-0.5 -translate-y-1/2 bg-linear-to-r from-transparent via-violet-300 to-transparent opacity-90 shadow-[0_0_10px_rgba(167,139,250,0.8)]" />
+                        </div>
+                        <p className="absolute right-0 bottom-5 left-0 text-center text-xs font-medium text-white/90">
+                          Place QR code inside the frame
+                        </p>
+                      </div>
+                    )}
+                    <div
+                      className={`absolute top-3 left-3 right-16 rounded-md px-2.5 py-1.5 text-xs font-medium ${feedbackTone[scanFeedback.type]}`}
+                    >
+                      {scanFeedback.text}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="absolute right-3 bottom-3"
+                      onClick={stopCamera}
+                    >
+                      Stop
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(scanMode === "manual" || !canUseCamera) && (
+                <form onSubmit={handleCheckIn} className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="token">Ticket code</Label>
+                    <Input
+                      id="token"
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Scan or paste ticket code"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      disabled={loading || scanAccessDenied}
+                      autoFocus
+                      autoComplete="off"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  {message && (
+                    <div
+                      className={`rounded-lg border px-3 py-2.5 text-sm ${
+                        message.type === "success"
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "border-destructive/30 bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {message.type === "success" ? (
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                        ) : (
+                          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                        )}
+                        <span>{message.text}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="h-12 w-full text-base"
+                    disabled={loading || !canScan}
+                  >
+                    {loading ? "Processing..." : "Check In"}
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
-        )}
-
-        {/* Manual entry form */}
-        {(scanMode === "manual" || !cameraSupported) && (
-          <form onSubmit={handleCheckIn}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Ticket code</CardTitle>
-                <CardDescription>
-                  Paste the code from the ticket or scan the QR code
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="token">Code</Label>
-                  <Input
-                    id="token"
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Paste or enter ticket code..."
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    disabled={loading}
-                    autoFocus
-                    autoComplete="off"
-                    className="h-12 text-base"
-                  />
-                </div>
-                {message && (
-                  <div
-                    className={`rounded-md p-3 text-sm ${
-                      message.type === "success"
-                        ? "bg-green-500/10 text-green-700 dark:text-green-400"
-                        : "bg-destructive/10 text-destructive"
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                )}
-                <Button
-                  type="submit"
-                  className="h-12 w-full text-base"
-                  disabled={loading || stations.length === 0}
-                >
-                  {loading ? "Checking in..." : "Check in"}
-                </Button>
-              </CardContent>
-            </Card>
-          </form>
-        )}
+        </section>
       </main>
     </div>
   );

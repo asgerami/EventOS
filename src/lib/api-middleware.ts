@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
+const STAFF_ALLOWED_API_PATTERNS = {
+  checkIn: /^\/api\/events\/[^/]+\/check-in(?:\/stats)?$/,
+  stationsList: /^\/api\/events\/[^/]+\/stations$/,
+};
+
 /**
  * API middleware to ensure tenant isolation.
  * Use this in API routes to get the authenticated user and their active organization.
@@ -61,10 +66,55 @@ export async function withTenant(request: NextRequest) {
       };
     }
 
+    const memberRecord = await prisma.member.findFirst({
+      where: {
+        organizationId,
+        userId: session.user.id,
+      },
+      select: { id: true, role: true },
+    });
+
+    if (!memberRecord) {
+      return {
+        error: NextResponse.json(
+          { error: "Not a member of this organization" },
+          { status: 403 }
+        ),
+      };
+    }
+
+    // Restrict scanner/staff accounts to check-in specific APIs only.
+    if (memberRecord.role === "staff") {
+      const pathname = new URL(request.url).pathname;
+      const method = request.method.toUpperCase();
+
+      const canAccessCheckIn = STAFF_ALLOWED_API_PATTERNS.checkIn.test(pathname);
+      const canAccessStationsList =
+        method === "GET" && STAFF_ALLOWED_API_PATTERNS.stationsList.test(pathname);
+
+      if (!canAccessCheckIn && !canAccessStationsList) {
+        return {
+          error: NextResponse.json(
+            {
+              error: "Forbidden",
+              message:
+                "Staff accounts can only use check-in endpoints. Ask an owner/cohost for management access.",
+            },
+            { status: 403 }
+          ),
+        };
+      }
+    }
+
     return {
       user: session.user,
       organization,
-      member: { organizationId, userId: session.user.id },
+      member: {
+        organizationId,
+        userId: session.user.id,
+        memberId: memberRecord.id,
+        role: memberRecord.role,
+      },
       tenantId: organization.id,
     };
   } catch (error) {

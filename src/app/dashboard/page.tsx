@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { requireAuth, getActiveOrganization, isSuperAdmin } from "@/lib/auth-utils";
+import {
+  requireAuth,
+  getActiveOrganization,
+  isSuperAdmin,
+  getActiveMemberRole,
+} from "@/lib/auth-utils";
 import { prisma } from "@/lib/db";
 import { AppNav } from "@/components/app-nav";
 import { Button } from "@/components/ui/button";
@@ -24,6 +29,8 @@ export default async function DashboardPage() {
   const session = await requireAuth();
   const organization = await getActiveOrganization();
   const showAdmin = await isSuperAdmin();
+  const memberRole = await getActiveMemberRole();
+  const isScanner = memberRole === "staff";
 
   /* ── No org selected ── */
   if (!organization) {
@@ -101,8 +108,16 @@ export default async function DashboardPage() {
                 </span>
               </p>
             </div>
-            <div className="flex gap-2">
-              {showAdmin && (
+            <div className="flex flex-wrap gap-2">
+              {!isScanner && (
+                <Button asChild variant="outline" size="sm" className="rounded-lg">
+                  <Link href="/organizations/members">
+                    <Users className="mr-1.5 h-3.5 w-3.5" />
+                    Team & scanners
+                  </Link>
+                </Button>
+              )}
+              {showAdmin && !isScanner && (
                 <Button asChild variant="outline" size="sm" className="rounded-lg">
                   <Link href="/admin">
                     <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
@@ -110,12 +125,14 @@ export default async function DashboardPage() {
                   </Link>
                 </Button>
               )}
-              <Button asChild size="sm" className="btn-gradient rounded-lg">
-                <Link href="/events/new">
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  New event
-                </Link>
-              </Button>
+              {!isScanner && (
+                <Button asChild size="sm" className="btn-gradient rounded-lg">
+                  <Link href="/events/new">
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    New event
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>

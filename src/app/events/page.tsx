@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireAuth, getActiveOrganization } from "@/lib/auth-utils";
+import {
+  requireAuth,
+  getActiveOrganization,
+  getActiveMemberRole,
+} from "@/lib/auth-utils";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +19,8 @@ import { ArrowRight, CalendarDays, MapPin, Plus, Users } from "lucide-react";
 export default async function EventsPage() {
   await requireAuth();
   const organization = await getActiveOrganization();
+  const memberRole = await getActiveMemberRole();
+  const isScanner = memberRole === "staff";
 
   if (!organization) {
     redirect("/organizations");
@@ -44,12 +50,14 @@ export default async function EventsPage() {
             <h1 className="text-2xl font-bold tracking-tight">Events</h1>
             <p className="text-sm text-muted-foreground">{organization.name}</p>
           </div>
-          <Button asChild className="btn-gradient rounded-xl">
-            <Link href="/events/new">
-              <Plus className="mr-1.5 h-4 w-4" />
-              Create event
-            </Link>
-          </Button>
+          {!isScanner && (
+            <Button asChild className="btn-gradient rounded-xl">
+              <Link href="/events/new">
+                <Plus className="mr-1.5 h-4 w-4" />
+                Create event
+              </Link>
+            </Button>
+          )}
         </div>
 
         {events.length === 0 ? (
@@ -75,7 +83,11 @@ export default async function EventsPage() {
             {events.map((event) => {
               const loc = event.location as any;
               return (
-                <Link key={event.id} href={`/events/${event.id}`} className="group">
+                <Link
+                  key={event.id}
+                  href={isScanner ? `/events/${event.id}/check-in` : `/events/${event.id}`}
+                  className="group"
+                >
                   <Card className="card-hover-glow h-full transition-colors">
                     {/* Status bar */}
                     <div className={`h-1 rounded-t-lg ${

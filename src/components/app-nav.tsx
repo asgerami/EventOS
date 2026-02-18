@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/sign-out-button";
 import { LayoutDashboard, Calendar, Building2, LogOut, Menu, X } from "lucide-react";
 
 type SessionState = Awaited<ReturnType<typeof authClient.getSession>>;
@@ -68,13 +68,9 @@ export function AppNav() {
           <span className="hidden max-w-[140px] truncate text-xs text-muted-foreground lg:block">
             {user.name ?? user.email}
           </span>
-          <a
-            href="/api/auth/sign-out"
-            className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground sm:inline-flex"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </a>
+          <SignOutButton
+            className="max-sm:hidden inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:opacity-50"
+          />
 
           {/* Mobile toggle */}
           <button
@@ -105,13 +101,9 @@ export function AppNav() {
                 </Link>
               );
             })}
-            <a
-              href="/api/auth/sign-out"
-              className="mt-1 flex items-center gap-2 rounded-lg border-t border-border/40 px-3 py-2 pt-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </a>
+            <SignOutButton
+              className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-border/40 px-3 py-2 pt-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            />
           </div>
         </div>
       )}

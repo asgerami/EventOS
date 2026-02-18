@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/sign-out-button";
 import {
   Card,
   CardContent,
@@ -472,9 +473,12 @@ export default async function Home() {
                     <Button asChild size="lg" className="h-12 rounded-xl bg-white px-8 text-base font-semibold text-violet-700 shadow-xl hover:bg-zinc-100">
                       <Link href="/events">Open EventOS</Link>
                     </Button>
-                    <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/30 bg-transparent px-8 text-base text-white hover:bg-white/10">
-                      <a href="/api/auth/sign-out">Sign out</a>
-                    </Button>
+                    <SignOutButton
+                      showIcon={false}
+                      className="inline-flex h-12 items-center justify-center rounded-xl border border-white/30 bg-transparent px-8 text-base text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                    >
+                      Sign out
+                    </SignOutButton>
                   </>
                 ) : (
                   <>

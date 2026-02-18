@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { requireAuth, getActiveOrganization } from "@/lib/auth-utils";
+import {
+  requireAuth,
+  getActiveOrganization,
+  getActiveMemberRole,
+} from "@/lib/auth-utils";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +21,12 @@ interface PageProps {
 
 export default async function EventStationsPage({ params }: PageProps) {
   const { id: eventId } = await params;
-  const session = await requireAuth();
+  await requireAuth();
   const organization = await getActiveOrganization();
+  const memberRole = await getActiveMemberRole();
 
   if (!organization) redirect("/organizations");
+  if (memberRole === "staff") redirect(`/events/${eventId}/check-in`);
 
   const event = await prisma.event.findFirst({
     where: { id: eventId, tenantId: organization.id, deletedAt: null },
@@ -91,9 +97,12 @@ export default async function EventStationsPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link href={`/events/${eventId}/check-in`}>Open check-in</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/organizations/members">Team & scanners</Link>
           </Button>
         </div>
       </div>

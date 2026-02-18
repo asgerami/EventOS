@@ -10,10 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const USERS_PAGE_SIZE = 50;
-
 export default async function SuperAdminPage() {
-  const [orgs, totalEvents, totalMembers, users] = await Promise.all([
+  const [orgs, totalEvents, totalUsers, users] = await Promise.all([
     prisma.organization.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -26,7 +24,6 @@ export default async function SuperAdminPage() {
     prisma.user.count(),
     prisma.user.findMany({
       orderBy: { createdAt: "desc" },
-      take: USERS_PAGE_SIZE,
       select: {
         id: true,
         name: true,
@@ -85,7 +82,7 @@ export default async function SuperAdminPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <span className="text-3xl font-bold">{totalMembers}</span>
+              <span className="text-3xl font-bold">{totalUsers}</span>
             </CardContent>
           </Card>
         </div>
@@ -131,11 +128,7 @@ export default async function SuperAdminPage() {
           <CardHeader>
             <CardTitle>Users</CardTitle>
             <CardDescription>
-              All users across tenants. Showing latest {USERS_PAGE_SIZE}
-              {totalMembers > USERS_PAGE_SIZE
-                ? ` of ${totalMembers}`
-                : ""}
-              .
+              All users across tenants ({users.length} total).
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -79,3 +79,71 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+/** Organization invitation email (Team & scanners) */
+export type SendOrganizationInvitationParams = {
+  email: string;
+  invitedByUsername: string;
+  invitedByEmail: string;
+  teamName: string;
+  inviteLink: string;
+};
+
+export async function sendOrganizationInvitation(
+  params: SendOrganizationInvitationParams
+): Promise<boolean> {
+  if (!RESEND_API_KEY) {
+    console.log("[Email] RESEND_API_KEY not set; skipping invitation email to", params.email);
+    return false;
+  }
+
+  const { email, invitedByUsername, invitedByEmail, teamName, inviteLink } = params;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: system-ui, sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 24px;">
+  <h1 style="font-size: 1.25rem;">You're invited to join ${escapeHtml(teamName)}</h1>
+  <p>Hi,</p>
+  <p><strong>${escapeHtml(invitedByUsername)}</strong> (${escapeHtml(invitedByEmail)}) has invited you to join the workspace <strong>${escapeHtml(teamName)}</strong> on ${escapeHtml(APP_NAME)}.</p>
+  <p>Click the button below to accept the invitation. You'll need to sign in or create an account first.</p>
+  <p style="margin: 24px 0;">
+    <a href="${escapeHtml(inviteLink)}" style="display: inline-block; background: #7c3aed; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Accept invitation</a>
+  </p>
+  <p style="font-size: 0.875rem; color: #666;">Or copy this link: ${escapeHtml(inviteLink)}</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+  <p style="font-size: 0.75rem; color: #999;">${escapeHtml(APP_NAME)}</p>
+</body>
+</html>
+`.trim();
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [email],
+        subject: `Join ${teamName} on ${APP_NAME}`,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("[Email] Resend invitation error:", res.status, err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[Email] Failed to send invitation:", e);
+    return false;
+  }
+}

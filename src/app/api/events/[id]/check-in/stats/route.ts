@@ -2,12 +2,21 @@ import { NextResponse } from "next/server";
 import { withTenantHandler } from "@/lib/api-middleware";
 import { prisma } from "@/lib/db";
 
+const SCAN_ALLOWED_ROLES = ["owner", "cohost", "staff"];
+
 /**
  * GET /api/events/[id]/check-in/stats
- * Returns check-in counts for the event (today and total).
+ * Returns check-in counts for the event. Only organizers and staff can view.
  */
 export const GET = withTenantHandler(
-  async (request, { tenantId, params }) => {
+  async (request, { tenantId, params, member }) => {
+    if (!SCAN_ALLOWED_ROLES.includes(member.role)) {
+      return NextResponse.json(
+        { error: "Forbidden", message: "Only organizers and staff can view check-in stats." },
+        { status: 403 }
+      );
+    }
+
     const { id: eventId } = (await params) as { id: string };
 
     const event = await prisma.event.findFirst({
