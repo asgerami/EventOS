@@ -3,6 +3,7 @@ import { z } from "zod";
 export const stationTypeEnum = z.enum([
   "entrance",
   "session_room",
+  "session_checkin",
   "vip",
   "registration_desk",
   "other",

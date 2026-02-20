@@ -26,12 +26,14 @@ import {
   ExternalLink,
   Globe,
   MapPin,
+  Pencil,
   QrCode,
   Radio,
   Ticket,
   Users,
 } from "lucide-react";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
+import { DeleteItemButton } from "@/components/ui/delete-item-button";
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -328,9 +330,24 @@ export default async function EventPage({ params }: EventPageProps) {
                                 </p>
                               </div>
                             </div>
-                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:px-2.5 sm:py-1 sm:text-[11px]">
-                              {s.type}
-                            </span>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:px-2.5 sm:py-1 sm:text-[11px]">
+                                {s.type}
+                              </span>
+                              <Link
+                                href={`/events/${event.id}/sessions/${s.id}/edit`}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                title="Edit session"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                              <DeleteItemButton
+                                apiPath={`/api/events/${event.id}/sessions/${s.id}`}
+                                itemType="session"
+                                itemName={s.name}
+                                iconOnly
+                              />
+                            </div>
                           </div>
                         </li>
                       ))}

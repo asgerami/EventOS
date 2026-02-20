@@ -107,13 +107,24 @@ export const POST = withTenantHandler(
           status: validatedData.status,
         },
         include: {
-          _count: {
-            select: {
-              checkIns: true,
-            },
-          },
+          _count: { select: { checkIns: true } },
         },
       });
+
+      // Auto-create a dedicated check-in station when the session requires one
+      if (validatedData.requiresSeparateCheckin) {
+        await prisma.station.create({
+          data: {
+            eventId,
+            name: `${validatedData.name} — Check-in`,
+            type: "session_checkin", // Use lowercase as defined in Zod enum
+            isActive: true,
+            sessions: {
+              connect: { id: session.id },
+            },
+          },
+        });
+      }
 
       return NextResponse.json({ session }, { status: 201 });
     } catch (error) {

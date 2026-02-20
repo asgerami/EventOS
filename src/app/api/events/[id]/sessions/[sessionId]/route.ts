@@ -163,6 +163,29 @@ export const PUT = withTenantHandler(
         },
       });
 
+      // Auto-create station if toggled on and doesn't exist
+      if (validatedData.requiresSeparateCheckin) {
+        // Check if session already has a check-in station assigned
+        const sessionWithStations = await prisma.eventSession.findUnique({
+          where: { id: sessionId },
+          include: { stationAssignments: { where: { type: "session_checkin" } } },
+        });
+
+        if (sessionWithStations && sessionWithStations.stationAssignments.length === 0) {
+          await prisma.station.create({
+            data: {
+              eventId,
+              name: `${session.name} — Check-in`,
+              type: "session_checkin",
+              isActive: true,
+              sessions: {
+                connect: { id: sessionId },
+              },
+            },
+          });
+        }
+      }
+
       return NextResponse.json({ session });
     } catch (error) {
       if (error instanceof ZodError) {

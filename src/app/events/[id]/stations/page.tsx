@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
+import { DeleteItemButton } from "@/components/ui/delete-item-button";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -89,9 +90,17 @@ export default async function EventStationsPage({ params }: PageProps) {
                         {s.type.replace("_", " ")} · {s._count.checkIns} check-ins
                       </p>
                     </div>
-                    <span className={`shrink-0 text-xs font-medium ${s.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-                      {s.isActive ? "Active" : "Inactive"}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className={`text-xs font-medium ${s.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                        {s.isActive ? "Active" : "Inactive"}
+                      </span>
+                      <DeleteItemButton
+                        apiPath={`/api/events/${eventId}/stations/${s.id}`}
+                        itemType="station"
+                        itemName={s.name}
+                        iconOnly
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>

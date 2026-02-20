@@ -103,6 +103,8 @@ export const DELETE = withTenantHandler(
       return NextResponse.json({ error: "Station not found" }, { status: 404 });
     }
 
+    // Delete related check-ins first (FK constraint: CheckIn_stationId_fkey)
+    await prisma.checkIn.deleteMany({ where: { stationId } });
     await prisma.station.delete({ where: { id: stationId } });
     return NextResponse.json({ message: "Station deleted", deletedId: stationId });
   }
