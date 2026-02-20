@@ -31,6 +31,7 @@ import {
   Ticket,
   Users,
 } from "lucide-react";
+import { DeleteEventButton } from "@/components/events/delete-event-button";
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -124,6 +125,11 @@ export default async function EventPage({ params }: EventPageProps) {
             </div>
             {/* Full-width stacked buttons on mobile, row on desktop */}
             <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:gap-2">
+              <DeleteEventButton
+                eventId={event.id}
+                eventName={event.name}
+                registrationCount={event._count.registrations}
+              />
               <Button asChild variant="outline" size="sm" className="h-11 rounded-xl border-border/80 bg-background/80 backdrop-blur sm:h-9 sm:rounded-lg">
                 <Link href={`/events/${event.id}/edit`} className="flex items-center justify-center">
                   <Edit className="mr-1.5 h-3.5 w-3.5" />
