@@ -200,7 +200,6 @@ export default async function Home() {
         <section className="bg-dot-pattern relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 lg:px-8 lg:pb-28 lg:pt-28">
           <div className="mx-auto max-w-4xl text-center">
             <div className="animate-fade-in-up mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm font-medium text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
-              <Sparkles className="h-3.5 w-3.5" />
               Built for modern event teams
             </div>
 

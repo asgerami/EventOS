@@ -16,6 +16,14 @@ export const GET = withTenantHandler(
         id: true,
         name: true,
         capacity: true,
+        ticketTypes: {
+          select: {
+            id: true,
+            name: true,
+            sold: true,
+            quantity: true,
+          }
+        },
         sessions: {
           orderBy: { startTime: "asc" },
           select: {
@@ -35,14 +43,13 @@ export const GET = withTenantHandler(
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const [todayCheckIns, totalCheckIns, totalRegistrations] = await Promise.all([
-      prisma.checkIn.count({
-        where: {
-          registration: { eventId },
-          type: "CHECKIN",
-          scannedAt: { gte: startOfToday },
-        },
-      }),
+    const [
+      totalCheckIns,
+      totalRegistrations,
+      checkInMethods,
+      todayCheckInsList,
+      allRegistrations
+    ] = await Promise.all([
       prisma.checkIn.count({
         where: {
           registration: { eventId },
@@ -50,7 +57,55 @@ export const GET = withTenantHandler(
         },
       }),
       prisma.registration.count({ where: { eventId } }),
+      prisma.checkIn.groupBy({
+        by: ["method"],
+        where: { registration: { eventId }, type: "CHECKIN" },
+        _count: { method: true },
+      }),
+      prisma.checkIn.findMany({
+        where: {
+          registration: { eventId },
+          type: "CHECKIN",
+          scannedAt: { gte: startOfToday },
+        },
+        select: { scannedAt: true },
+      }),
+      prisma.registration.findMany({
+        where: { eventId },
+        select: { registeredAt: true },
+        orderBy: { registeredAt: "asc" },
+      }),
     ]);
+
+    const todayCheckIns = todayCheckInsList.length;
+
+    // Process check-ins by hour
+    const checkInsByHour = new Array(24).fill(0);
+    todayCheckInsList.forEach((ci) => {
+      checkInsByHour[ci.scannedAt.getHours()]++;
+    });
+    const checkInTimeline = checkInsByHour.map((count, hour) => ({
+      hour: `${hour}:00`,
+      count,
+    }));
+
+    // Process registrations timeline (cumulative by day)
+    const registrationsByDay: Record<string, number> = {};
+    allRegistrations.forEach((r) => {
+      const day = r.registeredAt.toISOString().split("T")[0];
+      registrationsByDay[day] = (registrationsByDay[day] || 0) + 1;
+    });
+
+    let cumulativeRegistrations = 0;
+    const registrationTimeline = Object.entries(registrationsByDay).map(([date, count]) => {
+      cumulativeRegistrations += count;
+      return { date, count: cumulativeRegistrations };
+    });
+
+    const checkInMethodData = checkInMethods.map((m) => ({
+      method: m.method,
+      count: m._count.method,
+    }));
 
     const sessions = event.sessions.map((s) => ({
       id: s.id,
@@ -66,6 +121,10 @@ export const GET = withTenantHandler(
       totalCheckIns,
       totalRegistrations,
       sessions,
+      ticketSales: event.ticketTypes,
+      checkInMethodData,
+      checkInTimeline,
+      registrationTimeline,
     });
   }
 );
