@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -158,12 +159,7 @@ export default async function Home() {
       {/* ── Nav ── */}
       <header className="sticky top-0 z-50 border-b border-zinc-200/60 bg-white/70 backdrop-blur-xl dark:border-white/5 dark:bg-zinc-950/70">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-600 to-indigo-600 text-xs font-bold text-white shadow-lg shadow-violet-500/25">
-              E
-            </div>
-            <span className="text-lg font-semibold tracking-tight">EventOS</span>
-          </Link>
+          <Logo size={32} textClassName="text-lg font-semibold tracking-tight" />
 
           <nav className="hidden items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400 md:flex">
             <a href="#features" className="transition hover:text-zinc-900 dark:hover:text-white">Features</a>
@@ -499,12 +495,7 @@ export default async function Home() {
       <footer className="border-t border-zinc-200/70 bg-zinc-50 dark:border-white/5 dark:bg-zinc-950">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
           <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-600 to-indigo-600 text-xs font-bold text-white">
-                E
-              </div>
-              <span className="text-lg font-semibold tracking-tight">EventOS</span>
-            </Link>
+            <Logo size={32} textClassName="text-lg font-semibold tracking-tight" />
             <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
               The modern platform for registration, check-in, and event analytics.
             </p>

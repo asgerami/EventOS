@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Clock,
   MapPin,
-  Sparkles,
   Ticket,
 } from "lucide-react";
 
@@ -290,7 +289,6 @@ export default function PublicRegisterPage() {
         )}
         <div className="relative mx-auto max-w-5xl px-4 pb-14 pt-16 text-center text-white sm:px-6 sm:pb-20 sm:pt-28 lg:pb-24 lg:pt-32">
           <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur-sm sm:text-sm">
-            <Sparkles className="h-3.5 w-3.5" />
             {event.organization.name}
           </p>
           <h1 className="mb-4 text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">{event.name}</h1>

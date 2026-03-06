@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 function SignUpForm() {
   const router = useRouter();
@@ -48,12 +49,7 @@ function SignUpForm() {
     <div className="w-full max-w-sm page-enter">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <Link href="/" className="inline-flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-violet-500/25">
-            E
-          </div>
-          <span className="text-xl font-semibold tracking-tight">EventOS</span>
-        </Link>
+        <Logo size={36} textClassName="text-xl font-semibold tracking-tight" className="justify-center" />
       </div>
 
       <Card className="glass-card shadow-xl shadow-violet-500/5">

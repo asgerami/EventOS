@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LayoutDashboard, Calendar, Building2, LogOut, Menu, X } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 type SessionState = Awaited<ReturnType<typeof authClient.getSession>>;
 
@@ -38,13 +39,8 @@ export function AppNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-linear-to-br from-violet-600 to-indigo-600 text-[10px] font-bold text-white shadow-md shadow-violet-500/20">
-            E
-          </div>
-          <span className="text-sm font-semibold tracking-tight">EventOS</span>
-        </Link>
+        {/* Logo — icon only */}
+        <Logo size={28} showText={false} />
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 sm:flex">
