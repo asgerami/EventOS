@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "EventOS",
   description: "Multi-tenant event management platform",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

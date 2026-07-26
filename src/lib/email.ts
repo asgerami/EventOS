@@ -147,3 +147,69 @@ export async function sendOrganizationInvitation(
     return false;
   }
 }
+
+export type SendPasswordResetEmailParams = {
+  email: string;
+  url: string;
+  userName: string;
+};
+
+export async function sendPasswordResetEmail(
+  params: SendPasswordResetEmailParams
+): Promise<boolean> {
+  if (!RESEND_API_KEY) {
+    console.log("[Email] RESEND_API_KEY not set; skipping password reset email to", params.email);
+    console.log("[Email] Password Reset URL:", params.url);
+    return false;
+  }
+
+  const { email, url, userName } = params;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: system-ui, sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 24px;">
+  <h1 style="font-size: 1.25rem;">Reset your password</h1>
+  <p>Hi ${escapeHtml(userName)},</p>
+  <p>Someone recently requested a password change for your ${escapeHtml(APP_NAME)} account. If this was you, you can set a new password here:</p>
+  <p style="margin: 24px 0;">
+    <a href="${escapeHtml(url)}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px;">Reset password</a>
+  </p>
+  <p style="font-size: 0.875rem; color: #666;">If you didn't request this, you can safely ignore this email.</p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+  <p style="font-size: 0.75rem; color: #999;">${escapeHtml(APP_NAME)}</p>
+</body>
+</html>
+`.trim();
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [email],
+        subject: `Reset your ${APP_NAME} password`,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("[Email] Resend password reset error:", res.status, err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("[Email] Failed to send password reset:", e);
+    return false;
+  }
+}
+

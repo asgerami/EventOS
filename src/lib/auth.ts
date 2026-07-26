@@ -3,7 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { organization, admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { prisma } from "@/lib/db";
-import { sendOrganizationInvitation } from "@/lib/email";
+import { sendOrganizationInvitation, sendPasswordResetEmail } from "@/lib/email";
 
 // Define RBAC roles and permissions (event-level + organization plugin dimensions)
 const ac = createAccessControl({
@@ -57,6 +57,17 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
+        async sendResetPassword({ user, url }) {
+            const baseUrl = (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+            // Replace the internal callback URL with our own reset-password page
+            const token = new URL(url).pathname.split("/").pop() ?? "";
+            const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+            await sendPasswordResetEmail({
+                email: user.email,
+                url: resetUrl,
+                userName: user.name ?? user.email,
+            });
+        },
     },
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
     secret: process.env.BETTER_AUTH_SECRET,

@@ -1,0 +1,17 @@
+{
+  "short_name": "EventOS",
+  "name": "EventOS – Multi-Tenant Event Management Platform",
+  "description": "Enterprise event management, ticketing, and staff check-in station platform.",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512 192x192 96x96 48x48"
+    }
+  ],
+  "start_url": "/dashboard",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "display": "standalone",
+  "orientation": "any"
+}

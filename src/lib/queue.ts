@@ -8,7 +8,7 @@ import { sendTicketEmail } from "@/lib/email";
 
 const BATCH_SIZE = 20;
 
-export type JobType = "send_ticket_email";
+export type JobType = "send_ticket_email" | "generate_badge";
 
 export type SendTicketEmailPayload = {
   to: string;
@@ -18,9 +18,14 @@ export type SendTicketEmailPayload = {
   ticketTypeName: string;
 };
 
+export type GenerateBadgePayload = {
+  registrationId: string;
+  template?: "default" | "minimal" | "compact";
+};
+
 export async function enqueueJob(
   type: JobType,
-  payload: SendTicketEmailPayload,
+  payload: SendTicketEmailPayload | GenerateBadgePayload,
   options?: { runAt?: Date }
 ) {
   return prisma.job.create({
@@ -74,6 +79,25 @@ export async function processNextJobs(): Promise<{ processed: number; failed: nu
               runAt: nextRun,
               updatedAt: new Date(),
             },
+          });
+          failed++;
+        }
+      } else if (job.type === "generate_badge") {
+        const payload = job.payload as unknown as GenerateBadgePayload;
+        // Verify registration exists
+        const reg = await prisma.registration.findUnique({
+          where: { id: payload.registrationId },
+        });
+        if (reg) {
+          await prisma.job.update({
+            where: { id: job.id },
+            data: { status: "completed", updatedAt: new Date() },
+          });
+          processed++;
+        } else {
+          await prisma.job.update({
+            where: { id: job.id },
+            data: { status: "failed", lastError: "Registration not found", updatedAt: new Date() },
           });
           failed++;
         }

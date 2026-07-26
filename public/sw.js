@@ -1,14 +1,21 @@
-/* EventOS – offline check-in: cache check-in page when visited */
-const CACHE = "eventos-checkin-v1";
+/* EventOS – PWA & offline check-in service worker */
+const CACHE_NAME = "eventos-cache-v2";
+const ASSETS_TO_CACHE = [
+  "/logo.svg",
+  "/manifest.json",
+];
 
 self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
+  );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -16,16 +23,35 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (event.request.mode !== "navigate") return;
-  if (!url.pathname.match(/^\/events\/[^/]+\/check-in\/?$/)) return;
 
-  event.respondWith(
-    fetch(event.request)
-      .then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-        return res;
+  // Cache static Next.js assets
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return res;
+        });
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || new Response("Offline", { status: 503, statusText: "Offline" })))
-  );
+    );
+    return;
+  }
+
+  // Cache check-in page navigations for offline station usage
+  if (event.request.mode === "navigate" && url.pathname.match(/^\/events\/[^/]+\/check-in\/?$/)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
+    );
+    return;
+  }
 });
