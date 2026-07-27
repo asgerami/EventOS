@@ -129,12 +129,13 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-xs leading-relaxed text-ink-muted", className)}
       {...props}
     />
   )
 }
 
+/** Errors are stated plainly in the danger colour, with no icon or box. */
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? "") : props.children
@@ -147,7 +148,10 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn("text-destructive text-sm", className)}
+      className={cn(
+        "text-small leading-relaxed font-medium text-destructive",
+        className
+      )}
       {...props}
     >
       {body}

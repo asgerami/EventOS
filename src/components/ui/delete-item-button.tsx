@@ -64,7 +64,7 @@ export function DeleteItemButton({
             <DialogTrigger asChild>
                 {iconOnly ? (
                     <button
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title={`Delete ${itemType}`}
                     >
                         <Trash2 className="h-4 w-4" />
@@ -73,7 +73,7 @@ export function DeleteItemButton({
                     <Button
                         variant="outline"
                         size="sm"
-                        className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:border-red-800 dark:hover:bg-red-950/30"
+                        className="border-destructive/30 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                         <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                         Delete
@@ -83,25 +83,28 @@ export function DeleteItemButton({
 
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/50">
-                        <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                    <div className="flex items-center gap-2 text-destructive">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span className="eyebrow text-destructive">
+                            Permanent
+                        </span>
                     </div>
-                    <DialogTitle className="text-center text-lg capitalize">
+                    <DialogTitle className="capitalize">
                         Delete {itemType}?
                     </DialogTitle>
-                    <DialogDescription className="text-center text-sm">
-                        <span className="font-medium text-foreground">&ldquo;{itemName}&rdquo;</span> will be
+                    <DialogDescription>
+                        <span className="font-semibold text-ink">&ldquo;{itemName}&rdquo;</span> will be
                         permanently deleted. This action cannot be undone.
                     </DialogDescription>
                 </DialogHeader>
 
                 {error && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+                    <div className="rounded-md border border-destructive/25 bg-destructive/10 px-4 py-3 text-small text-destructive">
                         {error}
                     </div>
                 )}
 
-                <DialogFooter className="mt-2 flex-col gap-2 sm:flex-row sm:justify-center">
+                <DialogFooter className="mt-2 flex-col gap-2 sm:flex-row sm:justify-end">
                     <Button
                         variant="outline"
                         onClick={() => setOpen(false)}

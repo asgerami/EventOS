@@ -1,180 +1,390 @@
 import Link from "next/link";
-import { Logo } from "@/components/logo";
 import { headers } from "next/headers";
+
 import { auth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import { SignOutButton } from "@/components/sign-out-button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ArrowRight,
-  BarChart3,
-  Building2,
-  CalendarDays,
-  CheckCircle2,
-  CreditCard,
-  Globe,
-  Layers,
-  QrCode,
-  Shield,
-  ShieldCheck,
-  Sparkles,
-  Ticket,
-  Users,
-  WifiOff,
-  Zap,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/landing/reveal";
+import { HeroHeadline } from "@/components/landing/hero-headline";
 
-/* ─── Data ──────────────────────────────────────────── */
+/* ─── Content ───────────────────────────────────────────────────────────── */
 
-const features = [
+const NAV = [
+  { href: "#registration", label: "Registration" },
+  { href: "#check-in", label: "Check-in" },
+  { href: "#analytics", label: "Analytics" },
+  { href: "#teams", label: "Teams" },
+];
+
+/* Honest facts about how the product is built — not invented customer metrics
+   dressed up as social proof. */
+const FACTS: { figure: string; title: string; body: string }[] = [
   {
-    title: "Instant Event Setup",
-    description:
-      "Go from idea to published event in minutes. Configure schedule, sessions, ticket tiers, and branding from a single clean workflow.",
-    icon: CalendarDays,
-    accent: "from-violet-500/20 to-violet-600/5",
-    iconBg: "bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400",
-    span: "md:col-span-2",
+    figure: "0",
+    title: "accounts for attendees",
+    body: "They fill in a form and get a ticket by email. No password, no app, no portal to forget.",
   },
   {
-    title: "Smart Registration",
-    description:
-      "Public-facing sign-up with session selection, automatic QR ticket generation, and real-time capacity tracking.",
-    icon: Ticket,
-    accent: "from-blue-500/20 to-blue-600/5",
-    iconBg: "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
-    span: "",
+    figure: "1",
+    title: "record for the whole event",
+    body: "Registration, the door and the reports read and write the same rows. Nothing to reconcile afterwards.",
   },
   {
-    title: "Reliable Check-in",
-    description:
-      "Scan QR codes on any phone, enter codes manually, or deploy dedicated stations. Works offline and syncs automatically.",
-    icon: QrCode,
-    accent: "from-emerald-500/20 to-emerald-600/5",
-    iconBg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400",
-    span: "",
-  },
-  {
-    title: "Live Analytics",
-    description:
-      "Real-time dashboards for attendance, revenue, session fill rates, and check-in velocity. Export CSV and PDF on demand.",
-    icon: BarChart3,
-    accent: "from-amber-500/20 to-amber-600/5",
-    iconBg: "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
-    span: "md:col-span-2",
+    figure: "4",
+    title: "roles, scoped tightly",
+    body: "Owner, admin, staff and scanner. A volunteer on the door sees the door and nothing else.",
   },
 ];
 
-const steps = [
+const REGISTRATION_FIELDS: { label: string; value: string; note?: string }[] = [
+  { label: "Full name", value: "Amina Rahman" },
+  { label: "Email", value: "amina@northlight.co", note: "ticket sent here" },
+  { label: "Ticket type", value: "Full conference — £180", note: "12 left" },
+];
+
+const REGISTRATION_SESSIONS = [
+  { name: "Opening keynote", picked: true },
+  { name: "Research ops workshop", picked: true },
+  { name: "Evening social", picked: false },
+];
+
+const DOOR_LIST: { name: string; ticket: string; at: string | null }[] = [
+  { name: "Priya Nandakumar", ticket: "Full conference", at: "09:02" },
+  { name: "Tom Okafor", ticket: "Day pass", at: "09:04" },
+  { name: "Lena Fischer", ticket: "Speaker", at: null },
+];
+
+const SESSION_FILL: { name: string; booked: number; capacity: number }[] = [
+  { name: "Opening keynote", booked: 442, capacity: 480 },
+  { name: "Research ops workshop", booked: 58, capacity: 60 },
+  { name: "Facilitation workshop", booked: 31, capacity: 60 },
+  { name: "Evening social", booked: 186, capacity: 320 },
+];
+
+const ROLES: { name: string; scope: string }[] = [
   {
-    num: "01",
-    title: "Create workspace",
-    detail: "Set up your organization and invite team members.",
-    icon: Building2,
+    name: "Owner",
+    scope: "Everything, including workspace settings, billing details and who else gets in.",
   },
   {
-    num: "02",
-    title: "Build your event",
-    detail: "Add sessions, ticket types, branding, and registration page.",
-    icon: Layers,
+    name: "Admin",
+    scope: "Builds and publishes events, sets ticket types, invites the rest of the team.",
   },
   {
-    num: "03",
-    title: "Go live",
-    detail: "Publish, manage check-in stations, and scan attendees in.",
-    icon: Zap,
+    name: "Staff",
+    scope: "Reads registrations, works the door, exports the lists they need on the day.",
   },
   {
-    num: "04",
-    title: "Measure impact",
-    detail: "Review analytics, attendance reports, and revenue exports.",
-    icon: Sparkles,
+    name: "Scanner",
+    scope: "One screen: scan a ticket, get a yes or a no. Nothing else is reachable.",
   },
 ];
 
-const audiences = [
-  {
-    title: "Event Organizers",
-    description: "End-to-end lifecycle management for every event you run.",
-    points: [
-      "Multi-tenant workspace isolation",
-      "Draft to completion event lifecycle",
-      "Custom badge templates and branding",
-    ],
-    icon: Building2,
-    gradient: "from-violet-600 to-indigo-600",
-  },
-  {
-    title: "Operations & Staff",
-    description: "Tools purpose-built for the chaos of event day.",
-    points: [
-      "Mobile QR scanning with offline mode",
-      "Automatic sync queue when back online",
-      "Per-session attendance tracking",
-    ],
-    icon: ShieldCheck,
-    gradient: "from-blue-600 to-cyan-600",
-  },
-  {
-    title: "Finance & Leadership",
-    description: "The numbers you need, exportable and up-to-date.",
-    points: [
-      "CSV and PDF report generation",
-      "Real-time revenue dashboards",
-      "Cross-event performance comparison",
-    ],
-    icon: CreditCard,
-    gradient: "from-emerald-600 to-teal-600",
-  },
-];
+/* ─── Building blocks ───────────────────────────────────────────────────── */
 
-const stats = [
-  { value: "Real-time", label: "Attendance tracking", icon: BarChart3 },
-  { value: "Offline", label: "Check-in support", icon: WifiOff },
-  { value: "Multi-tenant", label: "Organization model", icon: Globe },
-  { value: "Role-based", label: "Access control", icon: Shield },
-];
+/** The left-hand column of every numbered section. Index, title, lede, points. */
+function SectionIntro({
+  index,
+  eyebrow,
+  title,
+  titleId,
+  lede,
+  points,
+}: {
+  index: string;
+  eyebrow: string;
+  title: string;
+  titleId: string;
+  lede: string;
+  points: string[];
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline gap-4">
+        <span className="index-numeral text-index" aria-hidden="true">
+          {index}
+        </span>
+        <span className="eyebrow">{eyebrow}</span>
+      </div>
 
-/* ─── Page ──────────────────────────────────────────── */
+      <h2 id={titleId} className="display mt-5 text-display-1">
+        {title}
+      </h2>
+
+      <p className="lede mt-6 max-w-lg text-lede">{lede}</p>
+
+      <ul className="mt-8 max-w-lg divide-y divide-rule border-t border-rule">
+        {points.map((point) => (
+          <li key={point} className="prose-body py-3.5 text-body">
+            {point}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Caption sitting under an interface preview. */
+function Caption({ children }: { children: React.ReactNode }) {
+  return <p className="mt-4 text-small text-ink-muted">{children}</p>;
+}
+
+/**
+ * The public registration form, drawn honestly at rest — the real thing an
+ * attendee sees, not a mockup of a browser showing it.
+ */
+function RegistrationPreview() {
+  return (
+    <div className="surface overflow-hidden">
+      <div className="border-b border-rule px-6 py-5 sm:px-8">
+        {/* A real URL, set as a URL — tracked-out caps would break it
+            mid-word on a narrow column. */}
+        <p className="text-small break-words text-ink-muted">
+          eventos.app/register/northlight-25
+        </p>
+        <p className="display-tight mt-1.5 text-display-3">
+          Register for the summit
+        </p>
+      </div>
+
+      <div className="space-y-5 px-6 py-6 sm:px-8" aria-hidden="true">
+        {REGISTRATION_FIELDS.map((field) => (
+          <div key={field.label}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-small font-semibold text-ink">
+                {field.label}
+              </span>
+              {field.note && (
+                <span className="shrink-0 text-xs text-ink-muted tabular-nums">
+                  {field.note}
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 truncate rounded-md border border-rule-strong bg-canvas px-3 py-2.5 text-body text-ink-soft">
+              {field.value}
+            </div>
+          </div>
+        ))}
+
+        <div>
+          <span className="text-small font-semibold text-ink">Sessions</span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {REGISTRATION_SESSIONS.map((session) => (
+              <span
+                key={session.name}
+                className={
+                  session.picked
+                    ? "rounded-sm border border-[oklch(0.53_0.193_258/35%)] bg-volt-wash px-2.5 py-1 text-small font-semibold text-volt-deep"
+                    : "rounded-sm border border-rule-strong px-2.5 py-1 text-small text-ink-muted"
+                }
+              >
+                {session.name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-md bg-volt px-4 py-3 text-center text-small font-semibold text-white">
+          Complete registration
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * What the door sees a fifth of a second after a scan: a decision, the person
+ * it belongs to, and the running count behind it.
+ */
+function CheckInPreview() {
+  const checkedIn = 312;
+  const expected = 480;
+  const pct = Math.round((checkedIn / expected) * 100);
+
+  return (
+    <div className="surface overflow-hidden">
+      {/* The confirmation itself. */}
+      <div className="border-b border-rule bg-volt px-6 py-7 text-white sm:px-8">
+        <p className="eyebrow text-white/75">Checked in · 09:06</p>
+        <p className="font-display mt-2 text-display-2 leading-none font-extrabold tracking-[-0.03em]">
+          Amina Rahman
+        </p>
+        <p className="mt-2 text-small text-white/85">
+          Full conference · TKT-8F41-22C9 · first scan
+        </p>
+      </div>
+
+      <div className="px-6 py-6 sm:px-8">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+          <p className="figure text-figure">
+            {checkedIn.toLocaleString("en-GB")}
+            <span className="text-ink-faint">
+              {" / "}
+              {expected.toLocaleString("en-GB")}
+            </span>
+          </p>
+          <p className="text-small text-ink-muted tabular-nums">
+            {pct}% arrived
+          </p>
+        </div>
+
+        <div
+          className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-canvas-tint"
+          role="img"
+          aria-label={`${checkedIn} of ${expected} attendees checked in`}
+        >
+          <div
+            className="h-full rounded-full bg-volt"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+
+        <ul className="mt-6 divide-y divide-rule border-t border-rule">
+          {DOOR_LIST.map((person) => (
+            <li
+              key={person.name}
+              className="flex items-center justify-between gap-4 py-3"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-body font-medium text-ink">
+                  {person.name}
+                </span>
+                <span className="block truncate text-small text-ink-muted">
+                  {person.ticket}
+                </span>
+              </span>
+              <span
+                className={
+                  person.at
+                    ? "shrink-0 text-small font-semibold text-ink tabular-nums"
+                    : "shrink-0 text-small text-ink-faint"
+                }
+              >
+                {person.at ?? "Not yet"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/** Session fill, read live off the same rows the door is writing to. */
+function AnalyticsPreview() {
+  return (
+    <div className="surface p-6 sm:p-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="eyebrow">Session fill</p>
+        <p className="text-small text-ink-muted">Northlight Design Summit</p>
+      </div>
+
+      <ul className="mt-7 space-y-5">
+        {SESSION_FILL.map((session) => {
+          const pct = Math.round((session.booked / session.capacity) * 100);
+          const tight = pct >= 90;
+          return (
+            <li key={session.name}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+                <span className="min-w-0 text-body font-medium text-ink">
+                  {session.name}
+                </span>
+                <span
+                  className={
+                    tight
+                      ? "shrink-0 text-small font-semibold text-volt tabular-nums"
+                      : "shrink-0 text-small text-ink-muted tabular-nums"
+                  }
+                >
+                  {session.booked}/{session.capacity}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-canvas-tint">
+                <div
+                  className={
+                    tight
+                      ? "h-full rounded-full bg-volt"
+                      : "h-full rounded-full bg-ink-soft"
+                  }
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 border-t border-rule pt-6 sm:grid-cols-2">
+        <div>
+          <p className="eyebrow">Busiest ten minutes</p>
+          <p className="figure mt-2 text-display-2 tabular-nums">08:50</p>
+        </div>
+        <div>
+          <p className="eyebrow">Exports</p>
+          <p className="figure mt-2 text-display-2">CSV, PDF</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Roles as a plain list — no wide table to overflow a phone. */
+function RolesPreview() {
+  return (
+    <div className="surface p-6 sm:p-8">
+      <p className="eyebrow">Workspace roles</p>
+      <ul className="mt-5 divide-y divide-rule border-t border-rule">
+        {ROLES.map((role) => (
+          <li key={role.name} className="py-4">
+            <p className="display-tight text-display-3">{role.name}</p>
+            <p className="prose-body mt-1 text-small">{role.scope}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-5 text-small text-ink-muted">
+        Enforced on the server, on every request — not hidden in the interface.
+      </p>
+    </div>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────── */
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
   const loggedIn = !!session?.user;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
+    <div className="min-h-dvh bg-canvas text-ink">
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-50 border-b border-rule bg-canvas">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-5 sm:px-8">
+          <Logo size={26} />
 
-      {/* ── Floating gradient blobs ── */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="animate-float-blob absolute -left-40 -top-40 h-[600px] w-[600px] rounded-full bg-violet-400/20 blur-3xl dark:bg-violet-600/10" />
-        <div className="animate-float-blob-reverse absolute -right-32 top-1/4 h-[500px] w-[500px] rounded-full bg-blue-400/15 blur-3xl dark:bg-blue-600/10" />
-        <div className="animate-float-blob absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-600/5" />
-      </div>
-
-      {/* ── Nav ── */}
-      <header className="sticky top-0 z-50 border-b border-zinc-200/60 bg-white/70 backdrop-blur-xl dark:border-white/5 dark:bg-zinc-950/70">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Logo size={32} textClassName="text-lg font-semibold tracking-tight" />
-
-          <nav className="hidden items-center gap-6 text-sm text-zinc-600 dark:text-zinc-400 md:flex">
-            <a href="#features" className="transition hover:text-zinc-900 dark:hover:text-white">Features</a>
-            <a href="#how-it-works" className="transition hover:text-zinc-900 dark:hover:text-white">How it works</a>
-            <a href="#built-for" className="transition hover:text-zinc-900 dark:hover:text-white">Built for</a>
+          <nav
+            aria-label="Sections"
+            className="ml-6 hidden items-center gap-7 lg:flex"
+          >
+            {NAV.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="nav-link text-small font-medium"
+              >
+                {item.label}
+              </a>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             {loggedIn ? (
               <>
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/dashboard">Dashboard</Link>
                 </Button>
-                <Button asChild size="sm" className="bg-linear-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700">
-                  <Link href="/events">Open events</Link>
+                <Button asChild size="sm">
+                  <Link href="/events">Your events</Link>
                 </Button>
               </>
             ) : (
@@ -182,8 +392,11 @@ export default async function Home() {
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/sign-in">Sign in</Link>
                 </Button>
-                <Button asChild size="sm" className="bg-linear-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700">
-                  <Link href="/sign-up">Get started free</Link>
+                <Button asChild size="sm">
+                  <Link href="/sign-up">
+                    <span className="sm:hidden">Start</span>
+                    <span className="hidden sm:inline">Create a workspace</span>
+                  </Link>
                 </Button>
               </>
             )}
@@ -192,295 +405,262 @@ export default async function Home() {
       </header>
 
       <main>
-        {/* ── Hero ── */}
-        <section className="bg-dot-pattern relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 lg:px-8 lg:pb-28 lg:pt-28">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="animate-fade-in-up mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-1.5 text-sm font-medium text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
-              Built for modern event teams
-            </div>
+        {/* ══ Hero — the type is the entire design ══ */}
+        <section aria-labelledby="hero-title">
+          <div className="mx-auto max-w-6xl px-5 pt-16 pb-14 sm:px-8 lg:pt-24 lg:pb-20">
+            <p className="eyebrow">Event operations, end to end</p>
 
-            <h1 className="animate-fade-in-up stagger-1 text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-              The operating system for{" "}
-              <span className="text-gradient">
-                unforgettable events
-              </span>
-            </h1>
-
-            <p className="animate-fade-in-up stagger-2 mx-auto mt-6 max-w-2xl text-lg text-zinc-600 dark:text-zinc-400 sm:text-xl">
-              Registration, ticketing, QR check-in, attendance, and real-time analytics
-              — unified in one platform so your team can focus on what matters.
-            </p>
-
-            <div className="animate-fade-in-up stagger-3 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {loggedIn ? (
-                <>
-                  <Button asChild size="lg" className="h-12 gap-2 rounded-xl bg-linear-to-r from-violet-600 to-indigo-600 px-8 text-base text-white shadow-xl shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700">
-                    <Link href="/events">
-                      Go to events
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline" className="h-12 rounded-xl px-8 text-base">
-                    <Link href="/dashboard">Open dashboard</Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button asChild size="lg" className="h-12 gap-2 rounded-xl bg-linear-to-r from-violet-600 to-indigo-600 px-8 text-base text-white shadow-xl shadow-violet-500/25 hover:from-violet-700 hover:to-indigo-700">
-                    <Link href="/sign-up">
-                      Create your workspace
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline" className="h-12 rounded-xl px-8 text-base">
-                    <Link href="/sign-in">I have an account</Link>
-                  </Button>
-                </>
-              )}
-            </div>
+            <HeroHeadline
+              id="hero-title"
+              className="hero-type mt-6 text-hero"
+            >
+              <span className="block">Doors open</span>
+              <span className="block">at nine.</span>
+              <span className="block text-volt">Nobody waits.</span>
+            </HeroHeadline>
           </div>
 
-          {/* ── Dashboard preview card ── */}
-          <div className="animate-fade-in-up stagger-4 mx-auto mt-16 max-w-4xl">
-            <div className="glass-card rounded-2xl p-1 shadow-2xl shadow-zinc-300/40 dark:shadow-black/30">
-              <div className="rounded-xl bg-white p-6 dark:bg-zinc-900">
-                {/* Fake title bar */}
-                <div className="mb-5 flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full bg-red-400" />
-                  <div className="h-3 w-3 rounded-full bg-amber-400" />
-                  <div className="h-3 w-3 rounded-full bg-emerald-400" />
-                  <span className="ml-3 text-xs text-zinc-400 dark:text-zinc-500">EventOS — Live Dashboard</span>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {/* Stat 1 */}
-                  <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
-                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Checked in</p>
-                    <p className="mt-1 text-3xl font-bold tracking-tight">1,284</p>
-                    <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-glow" />
-                      +42 in last 5 min
-                    </div>
-                  </div>
-                  {/* Stat 2 */}
-                  <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
-                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Revenue</p>
-                    <p className="mt-1 text-3xl font-bold tracking-tight">$42.3K</p>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                      <div className="h-full w-4/5 rounded-full bg-linear-to-r from-violet-500 to-indigo-500" />
-                    </div>
-                  </div>
-                  {/* Stat 3 */}
-                  <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/50">
-                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Sessions</p>
-                    <p className="mt-1 text-3xl font-bold tracking-tight">7</p>
-                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">active tracks running</p>
-                  </div>
-                </div>
-
-                {/* Mini activity feed */}
-                <div className="mt-4 space-y-2">
-                  {[
-                    { text: "Sarah M. checked in to Keynote", time: "2s ago", color: "bg-emerald-500" },
-                    { text: "VIP ticket sold — Workshop Pass", time: "15s ago", color: "bg-violet-500" },
-                    { text: "Station 2 synced 8 offline scans", time: "1m ago", color: "bg-blue-500" },
-                  ].map((item) => (
-                    <div key={item.text} className="flex items-center gap-3 rounded-lg border border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800">
-                      <div className={`h-2 w-2 shrink-0 rounded-full ${item.color}`} />
-                      <span className="flex-1 text-zinc-700 dark:text-zinc-300">{item.text}</span>
-                      <span className="text-xs text-zinc-400">{item.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Stats band ── */}
-        <section className="border-y border-zinc-200/70 bg-zinc-50/80 dark:border-white/5 dark:bg-white/2">
-          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-px sm:grid-cols-4">
-            {stats.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div key={stat.label} className="flex flex-col items-center gap-2 px-4 py-8 text-center sm:py-10">
-                  <Icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                  <p className="text-xl font-bold tracking-tight sm:text-2xl">{stat.value}</p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">{stat.label}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ── Features bento ── */}
-        <section id="features" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-              Platform capabilities
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything your event team needs
-            </h2>
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-              Four core pillars that replace a dozen disconnected tools.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={feature.title} className={`card-hover-glow group relative overflow-hidden ${feature.span}`}>
-                  {/* Subtle gradient overlay */}
-                  <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${feature.accent} opacity-0 transition-opacity group-hover:opacity-100`} />
-                  <CardHeader className="relative space-y-4">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${feature.iconBg}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="relative">
-                    <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                      {feature.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ── How it works ── */}
-        <section id="how-it-works" className="border-y border-zinc-200/70 bg-zinc-50/80 py-20 dark:border-white/5 dark:bg-white/2 lg:py-28">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto mb-14 max-w-2xl text-center">
-              <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-                How it works
-              </p>
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                From setup to insights in four steps
-              </h2>
-            </div>
-
-            <div className="relative grid gap-8 md:grid-cols-4">
-              {/* Connector line (desktop) */}
-              <div className="pointer-events-none absolute left-0 right-0 top-10 hidden h-px bg-linear-to-r from-transparent via-violet-300 to-transparent dark:via-violet-700 md:block" />
-
-              {steps.map((step) => {
-                const Icon = step.icon;
-                return (
-                  <div key={step.num} className="relative text-center">
-                    <div className="relative z-10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-violet-200 bg-white shadow-lg shadow-violet-500/10 dark:border-violet-500/30 dark:bg-zinc-900">
-                      <Icon className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <span className="mb-1 block text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400">
-                      Step {step.num}
-                    </span>
-                    <h3 className="mb-2 text-lg font-semibold">{step.title}</h3>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{step.detail}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Built for ── */}
-        <section id="built-for" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-              Built for every stakeholder
-            </p>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              One platform, every role covered
-            </h2>
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-              Whether you plan, operate, or report — EventOS adapts to how you work.
-            </p>
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            {audiences.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Card key={item.title} className="card-hover-glow group relative overflow-hidden">
-                  {/* Top gradient bar */}
-                  <div className={`h-1 w-full bg-linear-to-r ${item.gradient}`} />
-                  <CardHeader className="space-y-3">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-br ${item.gradient} text-white shadow-lg`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <CardTitle className="text-xl">{item.title}</CardTitle>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{item.description}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {item.points.map((point) => (
-                        <li key={point} className="flex items-start gap-2.5 text-sm text-zinc-700 dark:text-zinc-300">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                          {point}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ── Final CTA ── */}
-        <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-violet-600 via-indigo-600 to-blue-600 p-10 text-white shadow-2xl shadow-violet-500/20 sm:p-14 lg:p-20">
-            {/* Decorative circles */}
-            <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-white/10 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-
-            <div className="relative flex flex-col items-start gap-10 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-2xl space-y-4">
-                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                  Ready to run your next event with confidence?
-                </h2>
-                <p className="text-base text-white/80 sm:text-lg">
-                  Launch faster, eliminate check-in friction, and give every stakeholder
-                  real-time visibility — all from one platform.
+          <div className="border-y border-rule">
+            <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 py-10 sm:px-8 lg:grid-cols-12 lg:gap-16 lg:py-12">
+              <div className="lg:col-span-7">
+                <p className="lede max-w-xl text-lede">
+                  EventOS runs registration, ticketing, QR check-in, attendance
+                  and analytics off one shared record — so the day runs on
+                  something better than a group chat and three spreadsheets.
                 </p>
-                <div className="flex flex-wrap items-center gap-5 pt-1 text-sm text-white/70">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Users className="h-4 w-4" />
-                    Team-ready
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <WifiOff className="h-4 w-4" />
-                    Offline-safe
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <BarChart3 className="h-4 w-4" />
-                    Insight-driven
-                  </span>
-                </div>
               </div>
 
-              <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+              <div className="lg:col-span-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  {loggedIn ? (
+                    <>
+                      <Button asChild size="lg">
+                        <Link href="/events">Your events</Link>
+                      </Button>
+                      <Button asChild size="lg" variant="outline">
+                        <Link href="/dashboard">Go to dashboard</Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button asChild size="lg">
+                        <Link href="/sign-up">Create a workspace</Link>
+                      </Button>
+                      <Button asChild size="lg" variant="outline">
+                        <Link href="/sign-in">Sign in</Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <p className="mt-5 max-w-sm text-small text-ink-muted">
+                  Attendees never make an account. Your team keeps working when
+                  the venue wifi gives out.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ══ Facts ══ */}
+        <section
+          aria-label="How EventOS is built"
+          className="border-b border-rule bg-canvas-sunk"
+        >
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 py-14 sm:px-8 md:grid-cols-3 md:gap-12 lg:py-16">
+            {FACTS.map((fact, i) => (
+              <Reveal key={fact.figure} delay={i * 80}>
+                <p className="figure text-figure text-volt">{fact.figure}</p>
+                <p className="display-tight mt-4 text-display-3">
+                  {fact.title}
+                </p>
+                <p className="prose-body mt-2 text-small">{fact.body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* ══ 01 · Registration ══ */}
+        <section
+          id="registration"
+          aria-labelledby="registration-title"
+          className="border-b border-rule"
+        >
+          <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-5 py-20 sm:px-8 lg:grid-cols-12 lg:gap-16 lg:py-28">
+            <div className="lg:col-span-6">
+              <SectionIntro
+                index="01"
+                eyebrow="Registration"
+                titleId="registration-title"
+                title="Take the sign-up, send the ticket, move on"
+                lede="Each event gets its own hosted form. Capacity is checked at the moment someone submits, the ticket goes out by email straight away, and nobody has to create an account to attend."
+                points={[
+                  "Capacity is enforced when the row is written, not when the page loads — two people cannot take the last seat.",
+                  "Attendees pick their sessions during sign-up, so the fill numbers are real from day one.",
+                  "Ticket types, prices and limits stay yours to change up to the moment doors open.",
+                ]}
+              />
+            </div>
+            <div className="lg:col-span-6">
+              <Reveal>
+                <RegistrationPreview />
+              </Reveal>
+              <Caption>
+                The public form. One link, no login, works on a phone.
+              </Caption>
+            </div>
+          </div>
+        </section>
+
+        {/* ══ 02 · Check-in ══ */}
+        <section
+          id="check-in"
+          aria-labelledby="check-in-title"
+          className="border-b border-rule bg-canvas-sunk"
+        >
+          <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-5 py-20 sm:px-8 lg:grid-cols-12 lg:gap-16 lg:py-28">
+            <div className="lg:order-2 lg:col-span-6">
+              <SectionIntro
+                index="02"
+                eyebrow="Check-in"
+                titleId="check-in-title"
+                title="The queue is the one thing nobody forgives"
+                lede="Scan with the camera your team already has in their pocket. Type the reference when a badge is creased. Keep going when the building's wifi does not."
+                points={[
+                  "Scans made offline queue on the device and replay in order the moment the connection returns.",
+                  "Every check-in is attributed to a named station, so a disputed entry has an answer.",
+                  "A second scan of the same ticket is refused and recorded, rather than quietly counted twice.",
+                ]}
+              />
+            </div>
+            <div className="lg:order-1 lg:col-span-6">
+              <Reveal>
+                <CheckInPreview />
+              </Reveal>
+              <Caption>
+                What a door volunteer sees. Nothing else is reachable from here.
+              </Caption>
+            </div>
+          </div>
+        </section>
+
+        {/* ══ Pull quote ══ */}
+        <section
+          aria-label="Why we built it this way"
+          className="border-b border-rule"
+        >
+          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
+            <Reveal>
+              <figure className="max-w-4xl border-l-2 border-volt pl-6 sm:pl-10">
+                <blockquote className="pull-quote text-quote">
+                  The worst moment at any event is a queue that should not
+                  exist. Everything in here is built backwards from that
+                  moment.
+                </blockquote>
+                <figcaption className="eyebrow mt-6">
+                  Why EventOS looks the way it does
+                </figcaption>
+              </figure>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ══ 03 · Analytics ══ */}
+        <section
+          id="analytics"
+          aria-labelledby="analytics-title"
+          className="border-b border-rule"
+        >
+          <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-5 py-20 sm:px-8 lg:grid-cols-12 lg:gap-16 lg:py-28">
+            <div className="lg:col-span-6">
+              <SectionIntro
+                index="03"
+                eyebrow="Analytics"
+                titleId="analytics-title"
+                title="Numbers early enough to act on them"
+                lede="Fill rates, arrival curves and revenue come straight off the live rows — not a report that rebuilds overnight. You can still move a workshop to a bigger room at half past eight."
+                points={[
+                  "Per-session fill, so you learn which rooms are wrong while there is still time to change them.",
+                  "Arrival timing across the door, to staff the next event properly.",
+                  "CSV and PDF exports for the finance team, who will only ever open a spreadsheet.",
+                ]}
+              />
+            </div>
+            <div className="lg:col-span-6">
+              <Reveal>
+                <AnalyticsPreview />
+              </Reveal>
+              <Caption>
+                Read from the same rows the door is writing to, as it writes
+                them.
+              </Caption>
+            </div>
+          </div>
+        </section>
+
+        {/* ══ 04 · Teams ══ */}
+        <section
+          id="teams"
+          aria-labelledby="teams-title"
+          className="border-b border-rule bg-canvas-sunk"
+        >
+          <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-5 py-20 sm:px-8 lg:grid-cols-12 lg:gap-16 lg:py-28">
+            <div className="lg:order-2 lg:col-span-6">
+              <SectionIntro
+                index="04"
+                eyebrow="Teams and workspaces"
+                titleId="teams-title"
+                title="One deployment, however many organisations"
+                lede="Every event, ticket and attendee belongs to a workspace. Invite the people you need for the weekend, give them exactly the access the job requires, and take it back on Monday."
+                points={[
+                  "Records are scoped per organisation, so two teams on the same install never see each other.",
+                  "Invitations go out by email and expire; nobody is sharing one login round the team.",
+                  "Permissions are checked on the server for every request, including the API.",
+                ]}
+              />
+            </div>
+            <div className="lg:order-1 lg:col-span-6">
+              <Reveal>
+                <RolesPreview />
+              </Reveal>
+              <Caption>
+                Four roles, deliberately few. Most people only need two of them.
+              </Caption>
+            </div>
+          </div>
+        </section>
+
+        {/* ══ Close ══ */}
+        <section aria-labelledby="close-title">
+          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-28">
+            <div className="max-w-3xl">
+              <span className="rule-accent" aria-hidden="true" />
+              <h2 id="close-title" className="display mt-6 text-display-1">
+                Set it up this afternoon. Run the door on Saturday.
+              </h2>
+              <p className="lede mt-6 max-w-xl text-lede">
+                Make a workspace, build the event, publish the form, and work
+                the day from the same place that reports on it afterwards.
+              </p>
+
+              <div className="mt-9 flex flex-wrap items-center gap-3">
                 {loggedIn ? (
                   <>
-                    <Button asChild size="lg" className="h-12 rounded-xl bg-white px-8 text-base font-semibold text-violet-700 shadow-xl hover:bg-zinc-100">
+                    <Button asChild size="lg">
                       <Link href="/events">Open EventOS</Link>
                     </Button>
                     <SignOutButton
                       showIcon={false}
-                      className="inline-flex h-12 items-center justify-center rounded-xl border border-white/30 bg-transparent px-8 text-base text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+                      className="inline-flex h-12 items-center justify-center rounded-md border border-rule-strong bg-canvas-raised px-6 text-base font-semibold text-ink transition-colors hover:border-volt hover:text-volt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-volt disabled:opacity-50"
                     >
                       Sign out
                     </SignOutButton>
                   </>
                 ) : (
                   <>
-                    <Button asChild size="lg" className="h-12 rounded-xl bg-white px-8 text-base font-semibold text-violet-700 shadow-xl hover:bg-zinc-100">
-                      <Link href="/sign-up">Create free workspace</Link>
+                    <Button asChild size="lg">
+                      <Link href="/sign-up">Create a workspace</Link>
                     </Button>
-                    <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/30 bg-transparent px-8 text-base text-white hover:bg-white/10">
+                    <Button asChild size="lg" variant="outline">
                       <Link href="/sign-in">Sign in</Link>
                     </Button>
                   </>
@@ -492,47 +672,60 @@ export default async function Home() {
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-zinc-200/70 bg-zinc-50 dark:border-white/5 dark:bg-zinc-950">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Logo size={32} textClassName="text-lg font-semibold tracking-tight" />
-            <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
-              The modern platform for registration, check-in, and event analytics.
+      <footer className="border-t border-rule bg-canvas-sunk">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 py-14 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+          <div className="sm:col-span-2">
+            <Logo size={26} />
+            <p className="prose-body mt-4 max-w-xs text-small">
+              Registration, check-in and attendance for the people who have to
+              make the room work on the day.
             </p>
           </div>
 
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Platform</p>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li><a href="#features" className="transition hover:text-zinc-900 dark:hover:text-white">Features</a></li>
-              <li><a href="#how-it-works" className="transition hover:text-zinc-900 dark:hover:text-white">How it works</a></li>
-              <li><a href="#built-for" className="transition hover:text-zinc-900 dark:hover:text-white">Built for</a></li>
+          <nav aria-label="Sections">
+            <p className="eyebrow">On this page</p>
+            <ul className="mt-4 space-y-2.5">
+              {NAV.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} className="nav-link text-small">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Product</p>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li><Link href="/sign-up" className="transition hover:text-zinc-900 dark:hover:text-white">Get started</Link></li>
-              <li><Link href="/sign-in" className="transition hover:text-zinc-900 dark:hover:text-white">Sign in</Link></li>
-              <li><Link href="/dashboard" className="transition hover:text-zinc-900 dark:hover:text-white">Dashboard</Link></li>
+          <nav aria-label="Your account">
+            <p className="eyebrow">Your account</p>
+            <ul className="mt-4 space-y-2.5">
+              <li>
+                <Link href="/sign-up" className="nav-link text-small">
+                  Create a workspace
+                </Link>
+              </li>
+              <li>
+                <Link href="/sign-in" className="nav-link text-small">
+                  Sign in
+                </Link>
+              </li>
+              <li>
+                <Link href="/dashboard" className="nav-link text-small">
+                  Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link href="/events" className="nav-link text-small">
+                  Events
+                </Link>
+              </li>
             </ul>
-          </div>
-
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Highlights</p>
-            <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              <li>QR check-in with offline mode</li>
-              <li>Multi-tenant organizations</li>
-              <li>Real-time event analytics</li>
-            </ul>
-          </div>
+          </nav>
         </div>
 
-        <div className="border-t border-zinc-200/70 dark:border-white/5">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 text-xs text-zinc-400 sm:px-6 lg:px-8">
-            <p>EventOS</p>
-            <p>Built for event teams that care about the details.</p>
+        <div className="border-t border-rule">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-5 py-5 text-small text-ink-muted sm:px-8">
+            <p>EventOS — event operations, end to end.</p>
+            <p>Built for people who run rooms.</p>
           </div>
         </div>
       </footer>

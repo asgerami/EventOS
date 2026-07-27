@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface LogoProps {
     /** Width/height of the icon in pixels */
@@ -13,48 +14,33 @@ interface LogoProps {
     className?: string;
 }
 
+/**
+ * The identity is the wordmark; the mark is its anchor.
+ *
+ * A solid accent tile carrying a heavy geometric "E" — the same three-bar
+ * skeleton the display face uses, cut square. Two flat colours, no gradient,
+ * no stroke, so it stays crisp at 16px and reproduces in a single ink on a
+ * badge or a printed lanyard.
+ */
 function LogoIcon({ size = 28 }: { size?: number }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 512 512"
-            fill="none"
+            viewBox="0 0 24 24"
             width={size}
             height={size}
             className="shrink-0"
-            aria-label="EventOS logo"
+            role="img"
+            aria-label="EventOS"
         >
-            <defs>
-                <linearGradient id="eos-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#7c3aed" />
-                    <stop offset="100%" stopColor="#4f46e5" />
-                </linearGradient>
-                <linearGradient id="eos-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#a78bfa" />
-                    <stop offset="100%" stopColor="#818cf8" />
-                </linearGradient>
-            </defs>
-
-            {/* Rounded background */}
-            <rect width="512" height="512" rx="112" fill="url(#eos-bg)" />
-
-            {/* Calendar top bar */}
-            <rect x="96" y="88" width="320" height="56" rx="16" fill="rgba(255,255,255,0.2)" />
-            <rect x="168" y="68" width="16" height="44" rx="8" fill="rgba(255,255,255,0.9)" />
-            <rect x="328" y="68" width="16" height="44" rx="8" fill="rgba(255,255,255,0.9)" />
-
-            {/* Calendar body */}
-            <rect x="96" y="144" width="320" height="288" rx="16" fill="rgba(255,255,255,0.15)" />
-
-            {/* Stylized E — event blocks */}
-            <rect x="144" y="176" width="224" height="48" rx="10" fill="white" />
-            <rect x="144" y="256" width="176" height="48" rx="10" fill="white" />
-            <rect x="144" y="336" width="224" height="48" rx="10" fill="white" />
-            <rect x="144" y="176" width="56" height="208" rx="10" fill="white" />
-
-            {/* Live indicator dot */}
-            <circle cx="392" cy="280" r="20" fill="url(#eos-accent)" />
-            <circle cx="392" cy="280" r="10" fill="white" opacity="0.9" />
+            <rect width="24" height="24" rx="5" fill="var(--volt, #0565d8)" />
+            {/* The E: a full-height stem with three arms, the middle one short. */}
+            <g fill="#fff">
+                <rect x="6" y="5.5" width="3.1" height="13" />
+                <rect x="6" y="5.5" width="11.4" height="3.1" />
+                <rect x="6" y="10.45" width="8" height="3.1" />
+                <rect x="6" y="15.4" width="11.4" height="3.1" />
+            </g>
         </svg>
     );
 }
@@ -62,18 +48,27 @@ function LogoIcon({ size = 28 }: { size?: number }) {
 export function Logo({
     size = 28,
     showText = true,
-    textClassName = "text-sm font-semibold tracking-tight",
+    textClassName,
     linked = true,
     className = "",
 }: LogoProps) {
     const inner = (
         <>
             <LogoIcon size={size} />
-            {showText && <span className={textClassName}>EventOS</span>}
+            {showText && (
+                <span
+                    className={cn(
+                        "font-display text-[1.125rem] leading-none font-extrabold tracking-[-0.035em]",
+                        textClassName
+                    )}
+                >
+                    EventOS
+                </span>
+            )}
         </>
     );
 
-    const wrapperClass = `flex items-center gap-2.5 ${className}`.trim();
+    const wrapperClass = cn("flex items-center gap-2.5 text-ink", className);
 
     if (linked) {
         return (
